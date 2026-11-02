@@ -53,11 +53,6 @@ export const TeacherGamePlayPage = () => {
     audio.volume = 0.4;
     audioRef.current = audio;
 
-    audio.onerror = () => {
-      // Fallback to original full name if needed
-      audio.src = encodeURI('/SpongeBob SquarePants Closing Theme Song (INCOMPLETE).mp3');
-    };
-
     const tryAutoPlay = () => {
       audio
         .play()
