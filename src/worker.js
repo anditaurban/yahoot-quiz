@@ -183,7 +183,10 @@ async function handleGameApi(request, url) {
       status: 'lobby', // 'lobby' | 'question' | 'feedback' | 'finished'
       currentQuestionIndex: 0,
       totalQuestions: quiz.questions.length,
-      questions: quiz.questions,
+      questions: (quiz.questions || []).map((q) => ({
+        ...q,
+        timeLimit: Number(q.timeLimit !== undefined ? q.timeLimit : (q.time_limit !== undefined && Number(q.time_limit) <= 300 ? q.time_limit : 20)) || 20,
+      })),
       players: [],
       answers: {},
       createdAt: new Date().toISOString(),

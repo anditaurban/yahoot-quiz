@@ -39,20 +39,42 @@ export const transformLmsQuestionToApp = (q) => {
     type = 'true_false';
   }
 
+  const qId = q.question_id || q.id;
+  const storedLimit = typeof window !== 'undefined' && qId
+    ? localStorage.getItem(`yahoot_q_timelimit_${qId}`)
+    : null;
+  const storedPoints = typeof window !== 'undefined' && qId
+    ? localStorage.getItem(`yahoot_q_points_${qId}`)
+    : null;
+
+  const resolvedTimeLimit = Number(
+    q.timeLimit !== undefined
+      ? q.timeLimit
+      : q.time_limit !== undefined && Number(q.time_limit) > 0 && Number(q.time_limit) <= 300
+      ? q.time_limit
+      : storedLimit || 20
+  ) || 20;
+
+  const resolvedPoints = Number(
+    q.points !== undefined
+      ? q.points
+      : storedPoints || 100
+  ) || 100;
+
   return {
-    id: q.question_id,
-    question_id: q.question_id,
+    id: qId,
+    question_id: qId,
     quiz_id: q.quiz_id,
     owner_id: q.owner_id,
     type,
-    question: q.question_text || '',
-    question_text: q.question_text || '',
+    question: q.question_text || q.question || '',
+    question_text: q.question_text || q.question || '',
     options,
     correctOptionId: type === 'short_answer' ? rawCorrect : lowerCorrect,
     correct_answer: rawCorrect,
     order_index: q.order_index ?? 0,
-    timeLimit: 20, // default seconds for live game mode
-    points: 100,
+    timeLimit: resolvedTimeLimit,
+    points: resolvedPoints,
   };
 };
 
@@ -353,9 +375,18 @@ export const createQuestion = async (quizId, questionData) => {
   const payload = transformAppQuestionToLms(quizId, questionData, questionData.owner_id || DEFAULT_OWNER_ID);
   const response = await lmsClient.post('/add/course_quiz_question', payload);
 
+  const qId = response.question_id;
+  if (typeof window !== 'undefined' && qId) {
+    if (questionData.timeLimit) localStorage.setItem(`yahoot_q_timelimit_${qId}`, String(questionData.timeLimit));
+    if (questionData.points) localStorage.setItem(`yahoot_q_points_${qId}`, String(questionData.points));
+  }
+
   const createdQuestion = transformLmsQuestionToApp({
     ...payload,
+    ...questionData,
     question_id: response.question_id,
+    timeLimit: questionData.timeLimit !== undefined ? questionData.timeLimit : 20,
+    points: questionData.points !== undefined ? questionData.points : 100,
   });
 
   return createdQuestion;
@@ -441,10 +472,18 @@ export const updateQuestion = async (quizIdOrQuestionId, maybeQuestionIdOrData, 
   delete payload.quiz_id;
   delete payload.owner_id;
 
+  if (typeof window !== 'undefined' && questionId) {
+    if (data.timeLimit !== undefined) localStorage.setItem(`yahoot_q_timelimit_${questionId}`, String(data.timeLimit));
+    if (data.points !== undefined) localStorage.setItem(`yahoot_q_points_${questionId}`, String(data.points));
+  }
+
   const response = await lmsClient.put(`/update/course_quiz_question/${questionId}`, payload);
   return transformLmsQuestionToApp({
     ...payload,
+    ...data,
     question_id: questionId,
+    timeLimit: data.timeLimit !== undefined ? data.timeLimit : 20,
+    points: data.points !== undefined ? data.points : 100,
   });
 };
 

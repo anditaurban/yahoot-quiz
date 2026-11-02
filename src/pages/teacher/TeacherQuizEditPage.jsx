@@ -167,9 +167,14 @@ export const TeacherQuizEditPage = () => {
           order_index: (quiz.questions?.length || 0) + 1,
         };
         const created = await createQuestion(id, payload);
+        const createdWithMeta = {
+          ...created,
+          timeLimit: questionData.timeLimit !== undefined ? Number(questionData.timeLimit) : 20,
+          points: questionData.points !== undefined ? Number(questionData.points) : 100,
+        };
         setQuiz(prev => ({
           ...prev,
-          questions: [...(prev.questions || []), created],
+          questions: [...(prev.questions || []), createdWithMeta],
           questionCount: (prev.questions?.length || 0) + 1,
         }));
         setSuccessMsg('Soal baru berhasil ditambahkan.');
@@ -178,9 +183,14 @@ export const TeacherQuizEditPage = () => {
           ...questionData,
           order_index: editingQuestion.order_index || 1,
         });
+        const updatedWithMeta = {
+          ...updated,
+          timeLimit: questionData.timeLimit !== undefined ? Number(questionData.timeLimit) : (updated.timeLimit || 20),
+          points: questionData.points !== undefined ? Number(questionData.points) : (updated.points || 100),
+        };
         setQuiz(prev => ({
           ...prev,
-          questions: prev.questions.map(q => q.id === editingQuestion.id ? updated : q),
+          questions: prev.questions.map(q => q.id === editingQuestion.id ? updatedWithMeta : q),
         }));
         setSuccessMsg('Pertanyaan berhasil diperbarui.');
       }
@@ -547,6 +557,12 @@ export const TeacherQuizEditPage = () => {
                             : q.type === 'short_answer'
                             ? 'Ketik Isian Singkat'
                             : 'Pilihan Ganda (A-D)'}
+                        </Badge>
+                        <Badge variant="warning" size="sm" className="font-bold">
+                          ⏱️ {q.timeLimit || 20} Detik
+                        </Badge>
+                        <Badge variant="success" size="sm" className="font-bold">
+                          ⭐ {q.points || 100} Poin
                         </Badge>
                         <span className="text-slate-500 font-mono text-[11px]">
                           ID: #{q.id}
