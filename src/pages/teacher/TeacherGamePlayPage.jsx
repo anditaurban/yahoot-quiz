@@ -88,6 +88,7 @@ export const TeacherGamePlayPage = () => {
   const leaderboardAudioRef = useRef(null);
   const isPlayingSoundRef = useRef(true);
   const currentQuestionIdRef = useRef(null);
+  const currentQuestionIndexRef = useRef(-1);
   const roundPhaseRef = useRef('question');
 
   // Background Music & Sound Effects for Quiz Stages
@@ -205,12 +206,18 @@ export const TeacherGamePlayPage = () => {
         }
 
         // Detect if question advanced to a new one
-        if (qData.id !== currentQuestionIdRef.current) {
+        const isNewQuestion =
+          (qData.index !== undefined && qData.index !== currentQuestionIndexRef.current) ||
+          (qData.id !== undefined && qData.id !== currentQuestionIdRef.current);
+
+        if (isNewQuestion) {
           currentQuestionIdRef.current = qData.id;
+          currentQuestionIndexRef.current = qData.index;
           setQuestion(qData);
           roundPhaseRef.current = 'question';
           setRoundPhase('question');
           setTimerRunning(true);
+          setAnswerStats({ totalAnswers: 0, optionCounts: {} });
           // Restart SpongeBob sound for new question
           if (audioRef.current && isPlayingSoundRef.current) {
             audioRef.current.currentTime = 0;
@@ -315,9 +322,6 @@ export const TeacherGamePlayPage = () => {
     setShowAllLeaderboard(false);
     try {
       const res = await nextQuestion(id);
-      roundPhaseRef.current = 'question';
-      setRoundPhase('question');
-      setTimerRunning(true);
 
       // Stop any lingering leaderboard / fanfare sounds
       if (fanfareRef.current) {
@@ -329,13 +333,7 @@ export const TeacherGamePlayPage = () => {
         leaderboardAudioRef.current.currentTime = 0;
       }
 
-      // START SPONGEBOB AGAIN from the beginning for the new question!
-      if (audioRef.current && isPlayingSoundRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
-      }
-
-      if (res?.status === 'finished') {
+      if (res?.status === 'finished' || res?.finished) {
         if (audioRef.current) {
           audioRef.current.pause();
         }
@@ -343,6 +341,27 @@ export const TeacherGamePlayPage = () => {
           leaderboardAudioRef.current.pause();
         }
         navigate(`/teacher/games/${id}/result`);
+        return;
+      }
+
+      // If backend returned the next question directly, update immediately!
+      if (res?.question) {
+        currentQuestionIdRef.current = res.question.id;
+        currentQuestionIndexRef.current = res.question.index;
+        setQuestion(res.question);
+      } else if (res?.questionIndex !== undefined) {
+        currentQuestionIndexRef.current = res.questionIndex;
+      }
+
+      setAnswerStats({ totalAnswers: 0, optionCounts: {} });
+      roundPhaseRef.current = 'question';
+      setRoundPhase('question');
+      setTimerRunning(true);
+
+      // START SPONGEBOB AGAIN from the beginning for the new question!
+      if (audioRef.current && isPlayingSoundRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
       }
     } catch (err) {
       setError(err.message || 'Gagal melanjutkan ke soal berikutnya.');
@@ -461,6 +480,7 @@ export const TeacherGamePlayPage = () => {
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Question Card with Timer */}
             <QuestionCard
+              key={`q_${question.index}_${question.id}`}
               question={question.question}
               currentIndex={question.index}
               totalQuestions={game?.totalQuestions || 1}

@@ -28,6 +28,7 @@ export const StudentPlayPage = () => {
 
   const startTimeRef = useRef(Date.now());
   const currentQuestionIdRef = useRef(null);
+  const currentQuestionIndexRef = useRef(-1);
 
   // Load player session
   useEffect(() => {
@@ -73,9 +74,14 @@ export const StudentPlayPage = () => {
           return;
         }
 
-        // Check if question changed
-        if (qData.id !== currentQuestionIdRef.current) {
+        // Check if question changed to next question
+        const isNewQuestion =
+          (qData.index !== undefined && qData.index !== currentQuestionIndexRef.current) ||
+          (qData.id !== undefined && qData.id !== null && qData.id !== currentQuestionIdRef.current);
+
+        if (isNewQuestion) {
           currentQuestionIdRef.current = qData.id;
+          currentQuestionIndexRef.current = qData.index;
           setQuestion(qData);
           startTimeRef.current = Date.now();
           setSelectedOptionId(null);
@@ -223,6 +229,7 @@ export const StudentPlayPage = () => {
       {/* Main Question Card */}
       {question && (
         <QuestionCard
+          key={`q_${question.index}_${question.id}`}
           question={question.question}
           currentIndex={question.index}
           totalQuestions={question.totalQuestions}

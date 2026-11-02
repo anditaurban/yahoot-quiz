@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Gamepad2, ArrowLeft, ArrowRight, User } from 'lucide-react';
+import { Gamepad2, ArrowLeft, ArrowRight, User, Camera, QrCode, X, Upload } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
+import { Modal } from '../../components/ui/Modal';
 import { getGame, joinGame } from '../../services/api/games';
 
 export const JoinPage = () => {
@@ -18,12 +20,127 @@ export const JoinPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // QR Scanner States
+  const [showScanner, setShowScanner] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const scannerRef = useRef(null);
+
   // If initial PIN was passed in URL, verify it immediately
   useEffect(() => {
     if (initialPin.length === 5) {
       verifyPin(initialPin);
     }
   }, [initialPin]);
+
+  // Handle Camera QR Scanner
+  useEffect(() => {
+    if (!showScanner) return;
+    let scannerInstance = null;
+
+    const startScanner = async () => {
+      try {
+        setCameraError('');
+        const html5QrCode = new Html5Qrcode('qr-reader-scanner');
+        scannerInstance = html5QrCode;
+        scannerRef.current = html5QrCode;
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: { width: 220, height: 220 },
+          },
+          (decodedText) => {
+            let extractedPin = decodedText;
+            try {
+              const url = new URL(decodedText);
+              const param = url.searchParams.get('pin');
+              if (param) extractedPin = param;
+            } catch {
+              const match = decodedText.match(/\b\d{5}\b/);
+              if (match) extractedPin = match[0];
+            }
+
+            extractedPin = (extractedPin || '').replace(/\D/g, '').slice(0, 5);
+            if (extractedPin.length === 5) {
+              html5QrCode
+                .stop()
+                .then(() => {
+                  scannerRef.current = null;
+                  setShowScanner(false);
+                  setPin(extractedPin);
+                  verifyPin(extractedPin);
+                })
+                .catch(() => {
+                  setShowScanner(false);
+                  setPin(extractedPin);
+                  verifyPin(extractedPin);
+                });
+            }
+          },
+          () => {}
+        );
+      } catch (err) {
+        setCameraError(
+          'Tidak dapat mengakses kamera. Pastikan izin kamera aktif pada browser Anda atau masukkan 5 digit PIN secara manual.'
+        );
+      }
+    };
+
+    const timer = setTimeout(startScanner, 150);
+
+    return () => {
+      clearTimeout(timer);
+      if (scannerInstance) {
+        try {
+          scannerInstance.stop().then(() => scannerInstance.clear()).catch(() => {});
+        } catch {}
+      }
+    };
+  }, [showScanner]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setCameraError('');
+      const html5QrCode = new Html5Qrcode('qr-reader-scanner');
+      const decodedText = await html5QrCode.scanFile(file, true);
+      html5QrCode.clear();
+
+      let extractedPin = decodedText;
+      try {
+        const url = new URL(decodedText);
+        const param = url.searchParams.get('pin');
+        if (param) extractedPin = param;
+      } catch {
+        const match = decodedText.match(/\b\d{5}\b/);
+        if (match) extractedPin = match[0];
+      }
+
+      extractedPin = (extractedPin || '').replace(/\D/g, '').slice(0, 5);
+      if (extractedPin.length === 5) {
+        setShowScanner(false);
+        setPin(extractedPin);
+        verifyPin(extractedPin);
+      } else {
+        setCameraError('QR Code tidak mengandung kode PIN 5-digit yang valid.');
+      }
+    } catch {
+      setCameraError('Gagal memindai gambar QR Code. Coba gunakan foto lain atau ketik PIN manual.');
+    }
+  };
+
+  const closeScanner = () => {
+    if (scannerRef.current) {
+      try {
+        scannerRef.current.stop().then(() => scannerRef.current.clear()).catch(() => {});
+      } catch {}
+      scannerRef.current = null;
+    }
+    setShowScanner(false);
+  };
 
   const verifyPin = async (codeToVerify) => {
     setLoading(true);
@@ -141,6 +258,23 @@ export const JoinPage = () => {
               <ArrowRight className="w-5 h-5 ml-1.5 stroke-[3]" />
             </Button>
 
+            <div className="relative flex items-center justify-center my-3">
+              <div className="border-t-2 border-slate-200 w-full" />
+              <span className="bg-white px-3 text-xs font-bold uppercase text-slate-400">Atau</span>
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onClick={() => setShowScanner(true)}
+              className="flex items-center justify-center gap-2 border-2 border-slate-900 bg-amber-100 hover:bg-amber-200 text-slate-950 font-display font-bold text-sm shadow-block-sm"
+            >
+              <Camera className="w-4 h-4 stroke-[2.5]" />
+              <span>Scan QR Code dari Layar Guru</span>
+            </Button>
+
             <div className="text-center pt-2">
               <Link to="/" className="text-xs font-bold text-slate-500 hover:text-slate-800 hover:underline">
                 &larr; Kembali ke Beranda
@@ -206,6 +340,55 @@ export const JoinPage = () => {
           </form>
         )}
       </Card>
+
+      {/* Camera QR Scanner Modal */}
+      {showScanner && (
+        <Modal
+          isOpen={showScanner}
+          onClose={closeScanner}
+          title="Scan QR Code Kuis"
+        >
+          <div className="p-4 space-y-4">
+            <p className="text-xs sm:text-sm text-slate-700 font-semibold text-center">
+              Arahkan kamera ke QR Code di layar guru untuk masuk otomatis.
+            </p>
+
+            {cameraError && (
+              <div className="p-3 bg-red-50 border-2 border-red-500 rounded-block text-xs text-red-800 font-bold">
+                {cameraError}
+              </div>
+            )}
+
+            {/* Video container for html5-qrcode */}
+            <div className="relative w-full max-w-xs mx-auto border-3 border-slate-900 rounded-block overflow-hidden shadow-block bg-black min-h-[240px]">
+              <div id="qr-reader-scanner" className="w-full h-full" />
+            </div>
+
+            {/* Alternative: Upload screenshot of QR */}
+            <div className="pt-2 border-t-2 border-slate-100 flex flex-col gap-2">
+              <label className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 border-2 border-slate-900 rounded-block font-display font-bold text-xs text-slate-800 cursor-pointer transition-colors shadow-block-xs">
+                <Upload className="w-4 h-4" />
+                <span>Pilih Foto / Screenshot QR dari Galeri</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+
+              <Button
+                variant="secondary"
+                size="md"
+                fullWidth
+                onClick={closeScanner}
+              >
+                Batal & Ketik PIN Manual
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

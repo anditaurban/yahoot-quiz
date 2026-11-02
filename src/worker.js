@@ -81,12 +81,15 @@ async function getGameSession(codeOrId) {
   const clean = String(codeOrId || '').trim();
   if (!clean) return null;
 
-  // Always refresh from central Katib store
+  // Always refresh from central Katib store, but NEVER overwrite newer local state
   const central = await fetchCentralGames();
   for (const [id, g] of Object.entries(central)) {
-    games.set(id, g);
-    if (g.code) {
-      gamesByCode.set(String(g.code).trim(), g);
+    const local = games.get(id);
+    if (!local || !local.updatedAt || !g.updatedAt || g.updatedAt >= local.updatedAt) {
+      games.set(id, g);
+      if (g.code) {
+        gamesByCode.set(String(g.code).trim(), g);
+      }
     }
   }
 
@@ -96,6 +99,7 @@ async function getGameSession(codeOrId) {
 // Persist single game to both local memory and centralized storage
 async function persistGameSession(game) {
   if (!game || !game.id) return;
+  game.updatedAt = Date.now();
 
   games.set(game.id, game);
   if (game.code) {
@@ -104,7 +108,10 @@ async function persistGameSession(game) {
 
   // Update central store
   const central = await fetchCentralGames();
-  central[game.id] = game;
+  const existingCentral = central[game.id];
+  if (!existingCentral || !existingCentral.updatedAt || game.updatedAt >= existingCentral.updatedAt) {
+    central[game.id] = game;
+  }
   await saveCentralGames(central);
 }
 
@@ -183,13 +190,16 @@ async function handleGameApi(request, url) {
       status: 'lobby', // 'lobby' | 'question' | 'feedback' | 'finished'
       currentQuestionIndex: 0,
       totalQuestions: quiz.questions.length,
-      questions: (quiz.questions || []).map((q) => ({
+      questions: (quiz.questions || []).map((q, idx) => ({
         ...q,
+        id: q.id !== undefined && q.id !== null ? String(q.id) : (q.question_id ? String(q.question_id) : `q_${idx + 1}`),
+        question: q.question || q.question_text || '',
         timeLimit: Number(q.timeLimit !== undefined ? q.timeLimit : (q.time_limit !== undefined && Number(q.time_limit) <= 300 ? q.time_limit : 20)) || 20,
       })),
       players: [],
       answers: {},
       createdAt: new Date().toISOString(),
+      updatedAt: Date.now(),
       questionStartedAt: null,
     };
 
@@ -350,11 +360,11 @@ async function handleGameApi(request, url) {
     const timeLimit = Number(currentQ.timeLimit) || 20;
 
     const responseData = {
-      id: currentQ.id,
+      id: currentQ.id || `q_${qIndex}`,
       index: qIndex,
       totalQuestions: game.questions.length,
       type: currentQ.type || 'multiple_choice',
-      question: currentQ.question,
+      question: currentQ.question || currentQ.question_text || '',
       options: (currentQ.options || []).map((o) => ({ id: o.id, text: o.text })),
       timeLimit,
       points: currentQ.points || 100,
@@ -483,16 +493,36 @@ async function handleGameApi(request, url) {
       game.currentQuestionIndex += 1;
       game.status = 'question';
       game.questionStartedAt = Date.now();
+      game.updatedAt = Date.now();
+      game.answers = game.answers || {};
+      game.answers[game.currentQuestionIndex] = game.answers[game.currentQuestionIndex] || {};
     } else {
       game.status = 'finished';
+      game.updatedAt = Date.now();
     }
 
     await persistGameSession(game);
 
+    const nextQ = (game.questions || [])[game.currentQuestionIndex];
     return jsonResponse({
       data: {
         status: game.status,
         questionIndex: game.currentQuestionIndex,
+        finished: game.status === 'finished',
+        question: (game.status !== 'finished' && nextQ) ? {
+          id: nextQ.id || `q_${game.currentQuestionIndex}`,
+          index: game.currentQuestionIndex,
+          totalQuestions: game.questions.length,
+          type: nextQ.type || 'multiple_choice',
+          question: nextQ.question || nextQ.question_text || '',
+          options: (nextQ.options || []).map((o) => ({ id: o.id, text: o.text })),
+          timeLimit: Number(nextQ.timeLimit) || 20,
+          points: nextQ.points || 100,
+          correctOptionId: nextQ.correctOptionId || nextQ.correct_answer,
+          correct_answer: nextQ.correct_answer || nextQ.correctOptionId,
+          gameStatus: game.status,
+          finished: false,
+        } : null
       },
     });
   }

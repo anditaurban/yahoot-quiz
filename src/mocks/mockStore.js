@@ -294,8 +294,10 @@ class MockStore {
       status: 'lobby', // 'lobby' | 'question' | 'feedback' | 'finished'
       currentQuestionIndex: 0,
       totalQuestions: quiz.questions.length,
-      questions: (quiz.questions || []).map((q) => ({
+      questions: (quiz.questions || []).map((q, idx) => ({
         ...q,
+        id: q.id !== undefined && q.id !== null ? String(q.id) : (q.question_id ? String(q.question_id) : `q_${idx + 1}`),
+        question: q.question || q.question_text || '',
         timeLimit: Number(q.timeLimit !== undefined ? q.timeLimit : (q.time_limit !== undefined && Number(q.time_limit) <= 300 ? q.time_limit : 20)) || 20,
       })),
       players: [],
@@ -426,7 +428,9 @@ class MockStore {
       return {
         data: {
           status: 'finished',
-          questionIndex: game.currentQuestionIndex
+          questionIndex: game.currentQuestionIndex,
+          finished: true,
+          question: null
         }
       };
     }
@@ -435,10 +439,26 @@ class MockStore {
     game.status = 'question';
     this.saveGames(games);
 
+    const nextQ = game.questions[nextIndex];
     return {
       data: {
         status: 'question',
-        questionIndex: nextIndex
+        questionIndex: nextIndex,
+        finished: false,
+        question: nextQ ? {
+          id: nextQ.id || `q_${nextIndex}`,
+          index: nextIndex,
+          totalQuestions: game.questions.length,
+          type: nextQ.type || 'multiple_choice',
+          question: nextQ.question || nextQ.question_text || '',
+          options: (nextQ.options || []).map((o) => ({ id: o.id, text: o.text })),
+          timeLimit: Number(nextQ.timeLimit) || 20,
+          points: nextQ.points || 100,
+          correctOptionId: nextQ.correctOptionId || nextQ.correct_answer,
+          correct_answer: nextQ.correct_answer || nextQ.correctOptionId,
+          gameStatus: game.status,
+          finished: false,
+        } : null
       }
     };
   }
