@@ -192,16 +192,16 @@ export const StudentPlayPage = () => {
     <div className="min-h-[calc(100vh-4rem)] game-grid-pattern py-4 sm:py-6 px-3 sm:px-6 flex flex-col justify-between max-w-4xl mx-auto">
       {/* Top Header info */}
       <div className="flex items-center justify-between gap-2 mb-4">
-        <div className="flex items-center gap-2">
-          <span className="font-display font-black text-xs sm:text-sm bg-white border-2 border-slate-900 px-2.5 py-1 rounded-block shadow-block-sm">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="font-display font-black text-xs sm:text-sm bg-white border-2 border-slate-900 px-2.5 py-1 rounded-block shadow-block-sm truncate max-w-[120px] sm:max-w-[200px]">
             {playerSession?.nickname}
           </span>
-          <span className="font-display font-bold text-xs text-amber-700 bg-amber-100 border-2 border-slate-900 px-2.5 py-1 rounded-block shadow-block-sm">
+          <span className="font-display font-bold text-xs text-amber-700 bg-amber-100 border-2 border-slate-900 px-2.5 py-1 rounded-block shadow-block-sm shrink-0 whitespace-nowrap">
             {playerStats.score} Poin
           </span>
         </div>
 
-        <Badge variant="purple" size="sm">
+        <Badge variant="purple" size="sm" className="shrink-0">
           PIN: {code}
         </Badge>
       </div>

@@ -21,7 +21,7 @@ export const TeacherDashboardPage = () => {
       const data = await getQuizzes();
       setQuizzes(data);
     } catch (err) {
-      setError(err.message || 'Gagal mengambil daftar kuis dari LMS API.');
+      setError(err.message || 'Gagal mengambil daftar kuis.');
     } finally {
       setLoading(false);
     }
@@ -58,13 +58,13 @@ export const TeacherDashboardPage = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-100 border-2 border-slate-900 rounded-block font-display font-black text-xs text-indigo-950 mb-2 shadow-block-sm">
               <GraduationCap className="w-4 h-4 stroke-[2.5]" />
-              <span>Ruang Kerja Guru &bull; LMS API Terhubung</span>
+              <span>Ruang Kerja Guru</span>
             </div>
             <h1 className="font-display font-black text-3xl sm:text-4xl text-slate-950">
               Dashboard Guru
             </h1>
             <p className="text-sm font-medium text-slate-600 mt-1">
-              Kelola materi kuis LMS dan selenggarakan permainan interaktif di kelas.
+              Kelola koleksi materi kuis dan selenggarakan permainan interaktif di kelas.
             </p>
           </div>
 
@@ -99,7 +99,7 @@ export const TeacherDashboardPage = () => {
               <BookOpen className="w-5 h-5 text-indigo-600" />
             </div>
             <p className="font-display font-black text-3xl text-slate-950">{quizzes.length}</p>
-            <p className="text-xs text-slate-500 mt-1">Koleksi kuis LMS</p>
+            <p className="text-xs text-slate-500 mt-1">Koleksi kuis tersimpan</p>
           </Card>
 
           <Card className="bg-white">
@@ -128,7 +128,7 @@ export const TeacherDashboardPage = () => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-black text-xl text-slate-950">
-              Daftar Kuis Course
+              Daftar Kuis
             </h2>
             <Link
               to="/teacher/quizzes"
@@ -143,7 +143,7 @@ export const TeacherDashboardPage = () => {
           {loading && (
             <div className="p-12 text-center bg-white border-2 border-slate-900 rounded-block shadow-block">
               <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="font-display font-bold text-slate-700">Menghubungkan ke LMS API...</p>
+              <p className="font-display font-bold text-slate-700">Memuat koleksi kuis...</p>
             </div>
           )}
 
@@ -154,10 +154,10 @@ export const TeacherDashboardPage = () => {
                 <BookOpen className="w-6 h-6" />
               </div>
               <h3 className="font-display font-black text-lg text-slate-950 mb-1">
-                Belum Ada Kuis di Kursus Ini
+                Belum Ada Kuis Tersedia
               </h3>
               <p className="text-sm text-slate-600 mb-4 max-w-md mx-auto">
-                Mulai buat kuis pertama Anda di LMS API dengan menambahkan pertanyaan pilihan ganda.
+                Mulai buat kuis pertama Anda dengan menambahkan pertanyaan.
               </p>
               <Button
                 variant="primary"
@@ -180,12 +180,12 @@ export const TeacherDashboardPage = () => {
                   padding="md"
                 >
                   <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="min-w-0 flex-1">
                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block truncate">
-                          ID #{quiz.id} • {quiz.course_title ? `Topik: ${quiz.course_title}` : quiz.course_id ? `LMS #${quiz.course_id}` : 'Kuis Bebas'} {quiz.section_name ? `(${quiz.section_name})` : ''}
+                          ID #{quiz.id} • {quiz.course_title ? `Topik: ${quiz.course_title}` : quiz.course_id ? `Kursus #${quiz.course_id}` : 'Kuis Bebas'} {quiz.section_name ? `(${quiz.section_name})` : ''}
                         </span>
-                        <h3 className="font-display font-black text-xl text-slate-950 leading-tight mt-0.5">
+                        <h3 className="font-display font-black text-xl text-slate-950 leading-tight mt-0.5 break-words line-clamp-2">
                           {quiz.title}
                         </h3>
                       </div>

@@ -6,7 +6,7 @@ export const Badge = ({
   size = 'md',
   className = '',
 }) => {
-  const base = "inline-flex items-center gap-1.5 font-display font-bold border-2 border-slate-900 rounded-md select-none";
+  const base = "inline-flex items-center gap-1.5 font-display font-bold border-2 border-slate-900 rounded-md select-none shrink-0 max-w-full";
 
   const sizeStyles = {
     sm: "px-2 py-0.5 text-xs",

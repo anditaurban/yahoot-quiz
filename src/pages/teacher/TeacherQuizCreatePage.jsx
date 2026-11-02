@@ -111,7 +111,7 @@ export const TeacherQuizCreatePage = () => {
       const newQuiz = await createQuiz(payload);
       navigate(`/teacher/quizzes/${newQuiz.id}/edit`);
     } catch (err) {
-      setError(err.message || 'Gagal membuat kuis di LMS API.');
+      setError(err.message || 'Gagal membuat kuis.');
       setLoading(false);
     }
   };
@@ -126,7 +126,7 @@ export const TeacherQuizCreatePage = () => {
           </Link>
           <span>/</span>
           <Link to="/teacher/quizzes" className="hover:text-indigo-600 hover:underline">
-            Kuis LMS
+            Kuis
           </Link>
           <span>/</span>
           <span className="text-slate-900">Buat Baru</span>
@@ -135,10 +135,10 @@ export const TeacherQuizCreatePage = () => {
         <Card className="bg-white border-3 shadow-block-lg">
           <div className="mb-6">
             <h1 className="font-display font-black text-2xl sm:text-3xl text-slate-950 mb-1">
-              Buat Kuis Baru (Yahoot! API)
+              Buat Kuis Baru
             </h1>
             <p className="text-sm text-slate-600">
-              Pilih mode kursus fleksibel: pilih dari LMS, ketik nama materi sendiri, atau kuis umum mandiri.
+              Pilih mode kursus fleksibel: pilih dari daftar kursus, ketik nama materi sendiri, atau kuis umum mandiri.
             </p>
           </div>
 
@@ -178,7 +178,7 @@ export const TeacherQuizCreatePage = () => {
                   }`}
                 >
                   <span className="block font-black text-sm">Mode PILIH</span>
-                  <span className="text-[11px] font-normal">Pilih kursus LMS</span>
+                  <span className="text-[11px] font-normal">Pilih dari daftar kursus</span>
                 </button>
 
                 <button
@@ -221,7 +221,7 @@ export const TeacherQuizCreatePage = () => {
                 {courses.length > 0 ? (
                   <div>
                     <label className="block text-xs sm:text-sm font-display font-bold text-slate-900 mb-1.5">
-                      Pilih Kursus Terdaftar di LMS
+                      Pilih Kursus Terdaftar
                     </label>
                     <select
                       value={courseId}
@@ -230,14 +230,14 @@ export const TeacherQuizCreatePage = () => {
                     >
                       {courses.map(c => (
                         <option key={c.course_id} value={c.course_id}>
-                          Course #{c.course_id}: {c.title}
+                          Kursus #{c.course_id}: {c.title}
                         </option>
                       ))}
                     </select>
                   </div>
                 ) : (
                   <p className="text-xs text-slate-600 font-semibold">
-                    Memuat daftar kursus LMS...
+                    Memuat daftar kursus...
                   </p>
                 )}
 

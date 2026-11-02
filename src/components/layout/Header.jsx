@@ -23,22 +23,23 @@ export const Header = () => {
         </Link>
 
         {/* Navigation Switcher */}
-        <nav className="flex items-center gap-2 sm:gap-3" aria-label="Main Navigation">
+        <nav className="flex items-center gap-1.5 sm:gap-3" aria-label="Main Navigation">
           <Link
             to="/quizzes"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
               location.pathname === '/quizzes'
                 ? 'bg-amber-400 text-slate-950 shadow-block-sm'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
             <BookOpen className="w-4 h-4 stroke-[2.5]" />
-            <span>Kuis Mandiri</span>
+            <span className="hidden xs:inline sm:inline">Kuis Mandiri</span>
+            <span className="xs:hidden sm:hidden">Kuis</span>
           </Link>
 
           <Link
             to="/join"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
               location.pathname === '/join' || location.pathname.startsWith('/game')
                 ? 'bg-indigo-600 text-white shadow-block-sm'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -50,7 +51,7 @@ export const Header = () => {
 
           <Link
             to="/teacher"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
               isTeacherArea
                 ? 'bg-indigo-600 text-white shadow-block-sm'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'

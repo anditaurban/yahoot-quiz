@@ -166,25 +166,29 @@ export const StudentQuizListPage = () => {
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block truncate">
-                      {quiz.course_title ? `Topik: ${quiz.course_title}` : quiz.course_id ? `Course #${quiz.course_id}` : 'Kuis Umum'}
-                    </span>
-                    {quiz.is_passed ? (
-                      <Badge variant="success" size="sm">
-                        Lulus (Skor: {quiz.highest_score})
-                      </Badge>
-                    ) : quiz.attempts > 0 ? (
-                      <Badge variant="warning" size="sm">
-                        {quiz.attempts}x Percobaan
-                      </Badge>
-                    ) : (
-                      <Badge variant="neutral" size="sm">
-                        Belum Dikerjakan
-                      </Badge>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block truncate">
+                        {quiz.course_title ? `Topik: ${quiz.course_title}` : quiz.course_id ? `Kursus #${quiz.course_id}` : 'Kuis Umum'}
+                      </span>
+                    </div>
+                    <div className="shrink-0">
+                      {quiz.is_passed ? (
+                        <Badge variant="success" size="sm">
+                          Lulus (Skor: {quiz.highest_score})
+                        </Badge>
+                      ) : quiz.attempts > 0 ? (
+                        <Badge variant="warning" size="sm">
+                          {quiz.attempts}x Percobaan
+                        </Badge>
+                      ) : (
+                        <Badge variant="neutral" size="sm">
+                          Belum Dikerjakan
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
-                  <h3 className="font-display font-black text-lg sm:text-xl text-slate-950 leading-tight mb-1.5">
+                  <h3 className="font-display font-black text-lg sm:text-xl text-slate-950 leading-tight mb-1.5 break-words line-clamp-2">
                     {quiz.title}
                   </h3>
 

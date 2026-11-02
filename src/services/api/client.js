@@ -71,7 +71,7 @@ export const lmsClient = {
     } catch (err) {
       if (err instanceof ApiError) throw err;
       throw new ApiError(
-        err.message || 'Gagal terhubung ke LMS API. Pastikan server aktif dan koneksi internet stabil.',
+        err.message || 'Gagal terhubung ke server. Pastikan koneksi internet stabil.',
         'NETWORK_ERROR',
         0
       );

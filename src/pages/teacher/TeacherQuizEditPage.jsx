@@ -88,7 +88,7 @@ export const TeacherQuizEditPage = () => {
       }
       return data;
     } catch (err) {
-      setError(err.message || 'Gagal memuat detail kuis dari LMS API.');
+      setError(err.message || 'Gagal memuat detail kuis.');
       return null;
     } finally {
       if (showLoadingSpinner) {
@@ -187,12 +187,12 @@ export const TeacherQuizEditPage = () => {
       setEditingQuestion(null);
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      setError(err.message || 'Gagal menyimpan soal ke LMS API.');
+      setError(err.message || 'Gagal menyimpan soal.');
     }
   };
 
   const handleDeleteQuestion = async (questionId) => {
-    if (!window.confirm('Hapus soal ini dari kuis di LMS API?')) return;
+    if (!window.confirm('Hapus soal ini dari kuis?')) return;
     setError('');
     try {
       await deleteQuestion(questionId);
@@ -204,7 +204,7 @@ export const TeacherQuizEditPage = () => {
       setSuccessMsg('Soal berhasil dihapus.');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      setError(err.message || 'Gagal menghapus soal dari LMS API.');
+      setError(err.message || 'Gagal menghapus soal.');
     }
   };
 
@@ -318,7 +318,7 @@ export const TeacherQuizEditPage = () => {
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
         <div className="text-center">
           <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="font-display font-bold text-slate-700">Memuat Detail Kuis dari LMS API...</p>
+          <p className="font-display font-bold text-slate-700">Memuat Detail Kuis...</p>
         </div>
       </div>
     );
@@ -353,7 +353,7 @@ export const TeacherQuizEditPage = () => {
           </Link>
           <span>/</span>
           <Link to="/teacher/quizzes" className="hover:text-indigo-600 hover:underline">
-            Kuis LMS
+            Kuis
           </Link>
           <span>/</span>
           <span className="text-slate-900 truncate max-w-xs">{quiz?.title}</span>
@@ -407,7 +407,7 @@ export const TeacherQuizEditPage = () => {
 
                 {quiz?.course_id && (
                   <Badge variant="purple" size="sm">
-                    LMS Course #{quiz.course_id}
+                    Kursus #{quiz.course_id}
                   </Badge>
                 )}
 
@@ -532,11 +532,11 @@ export const TeacherQuizEditPage = () => {
             {questions.map((q, idx) => (
               <Card key={q.id || idx} className="bg-white" padding="md">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
-                  <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
                     <span className="w-8 h-8 rounded-block bg-slate-900 text-amber-300 font-display font-black text-sm flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-display font-black text-base sm:text-lg text-slate-950 leading-snug break-words">
                         {q.question}
                       </h3>
@@ -590,14 +590,14 @@ export const TeacherQuizEditPage = () => {
                 {/* Answers / Options breakdown */}
                 {q.type === 'short_answer' ? (
                   <div className="mt-3 pt-3 border-t border-slate-100">
-                    <div className="px-3.5 py-2.5 bg-amber-50 border-2 border-amber-300 rounded-block flex items-center justify-between">
-                      <div className="text-xs">
+                    <div className="px-3.5 py-2.5 bg-amber-50 border-2 border-amber-300 rounded-block flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs min-w-0 flex-1 mr-2 break-words">
                         <span className="font-bold text-amber-900 mr-2">KUNCI JAWABAN TEKS:</span>
-                        <span className="font-display font-black text-slate-950 text-sm">
+                        <span className="font-display font-black text-slate-950 text-sm break-words">
                           "{q.correct_answer || q.correctOptionId}"
                         </span>
                       </div>
-                      <Badge variant="warning" size="sm">
+                      <Badge variant="warning" size="sm" className="shrink-0">
                         Dicocokkan Otomatis
                       </Badge>
                     </div>
@@ -609,18 +609,18 @@ export const TeacherQuizEditPage = () => {
                       return (
                         <div
                           key={opt.id}
-                          className={`px-3 py-2 text-xs font-display font-bold rounded-block border-2 flex items-center justify-between ${
+                          className={`px-3 py-2 text-xs font-display font-bold rounded-block border-2 flex items-center justify-between gap-2 ${
                             isCorrect
                               ? 'bg-emerald-100 border-emerald-500 text-emerald-950 font-black'
                               : 'bg-slate-50 border-slate-200 text-slate-700'
                           }`}
                         >
-                          <span className="truncate">
-                            <span className="uppercase text-slate-500 mr-1.5">[{opt.id}]</span>
+                          <span className="truncate min-w-0 flex-1">
+                            <span className="uppercase text-slate-500 mr-1.5 shrink-0">[{opt.id}]</span>
                             {opt.text}
                           </span>
                           {isCorrect && (
-                            <span className="flex items-center gap-1 text-[11px] text-emerald-800 shrink-0 ml-2 font-black">
+                            <span className="flex items-center gap-1 text-[11px] text-emerald-800 shrink-0 font-black">
                               <Check className="w-3.5 h-3.5 stroke-[3]" />
                               <span>Kunci Benar</span>
                             </span>
@@ -639,7 +639,7 @@ export const TeacherQuizEditPage = () => {
         <Modal
           isOpen={editingMeta}
           onClose={() => setEditingMeta(false)}
-          title="Edit Informasi Kuis (Yahoot! API)"
+          title="Edit Informasi Kuis"
           maxWidth="max-w-xl"
         >
           <form onSubmit={handleSaveMeta} className="space-y-4">
@@ -672,7 +672,7 @@ export const TeacherQuizEditPage = () => {
             {sections.length > 0 && (
               <div>
                 <label className="block text-xs sm:text-sm font-display font-bold text-slate-900 mb-1">
-                  Seksi Kurikulum LMS
+                  Seksi Kurikulum
                 </label>
                 <select
                   value={metaForm.section_id}
@@ -821,7 +821,7 @@ export const TeacherQuizEditPage = () => {
         <Modal
           isOpen={Boolean(editingQuestion)}
           onClose={() => setEditingQuestion(null)}
-          title={editingQuestion === 'new' ? 'Tambah Soal Baru (Yahoot! API)' : 'Edit Pertanyaan (Yahoot! API)'}
+          title={editingQuestion === 'new' ? 'Tambah Soal Baru' : 'Edit Pertanyaan'}
           maxWidth="max-w-xl"
         >
           <QuizEditor

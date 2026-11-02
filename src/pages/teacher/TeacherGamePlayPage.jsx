@@ -221,7 +221,7 @@ export const TeacherGamePlayPage = () => {
             <p className="text-xs uppercase font-bold text-slate-500 tracking-wide mb-1">
               Kunci Jawaban yang Diharapkan:
             </p>
-            <p className="font-display font-black text-2xl sm:text-3xl text-slate-950">
+            <p className="font-display font-black text-2xl sm:text-3xl text-slate-950 break-words">
               {showAnswer ? `"${question.correctOptionId || question.correct_answer}"` : '•••••••••••• (Tersembunyi)'}
             </p>
             <p className="text-xs text-slate-600 mt-2 font-medium">
@@ -258,7 +258,7 @@ export const TeacherGamePlayPage = () => {
                     )}
                   </div>
 
-                  <p className="font-display font-bold text-base sm:text-lg text-slate-950 mb-3">
+                  <p className="font-display font-bold text-base sm:text-lg text-slate-950 mb-3 break-words">
                     {opt.text}
                   </p>
 

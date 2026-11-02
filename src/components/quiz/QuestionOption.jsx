@@ -98,7 +98,7 @@ export const QuestionOption = ({
       </span>
 
       {/* Option Text */}
-      <span className="flex-1 font-display font-bold text-base sm:text-lg md:text-xl leading-snug">
+      <span className="flex-1 min-w-0 font-display font-bold text-base sm:text-lg md:text-xl leading-snug break-words">
         {option.text}
       </span>
 

@@ -71,7 +71,7 @@ export const TeacherQuizListPage = () => {
       setTotalRecords(result.totalRecords || 0);
       setPage(result.currentPage || currentPage);
     } catch (err) {
-      setError(err.message || 'Gagal memuat daftar kuis dari LMS API.');
+      setError(err.message || 'Gagal memuat daftar kuis.');
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,7 @@ export const TeacherQuizListPage = () => {
             Dashboard Guru
           </Link>
           <span>/</span>
-          <span className="text-slate-900">Koleksi Kuis LMS</span>
+          <span className="text-slate-900">Koleksi Kuis</span>
         </div>
 
         {/* Top Header */}
@@ -149,7 +149,7 @@ export const TeacherQuizListPage = () => {
               Koleksi Kuis
             </h1>
             <p className="text-sm font-medium text-slate-600 mt-0.5">
-              Kelola materi kuis LMS API: buat kuis, atur status publikasi, dan host live game.
+              Kelola koleksi materi kuis: buat kuis, atur status publikasi, dan host live game.
             </p>
           </div>
 
@@ -213,7 +213,7 @@ export const TeacherQuizListPage = () => {
         {loading && (
           <div className="p-12 text-center bg-white border-2 border-slate-900 rounded-block shadow-block">
             <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="font-display font-bold text-slate-700">Memuat koleksi kuis dari LMS API...</p>
+            <p className="font-display font-bold text-slate-700">Memuat koleksi kuis...</p>
           </div>
         )}
 
@@ -229,7 +229,7 @@ export const TeacherQuizListPage = () => {
             <p className="text-sm text-slate-600 mb-4 max-w-sm mx-auto">
               {search
                 ? `Tidak ditemukan kuis dengan kata kunci "${search}".`
-                : 'Mulai buat kuis pertama Anda sekarang di LMS API.'}
+                : 'Mulai buat kuis pertama Anda sekarang.'}
             </p>
             {search ? (
               <Button
@@ -267,11 +267,11 @@ export const TeacherQuizListPage = () => {
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block truncate">
-                          ID #{quiz.id} • {quiz.course_title ? `Topik: ${quiz.course_title}` : quiz.course_id ? `LMS #${quiz.course_id}` : 'Kuis Bebas'} {quiz.section_name ? `(${quiz.section_name})` : ''}
+                          ID #{quiz.id} • {quiz.course_title ? `Topik: ${quiz.course_title}` : quiz.course_id ? `Kursus #${quiz.course_id}` : 'Kuis Bebas'} {quiz.section_name ? `(${quiz.section_name})` : ''}
                         </span>
-                        <h3 className="font-display font-black text-lg sm:text-xl text-slate-950 leading-tight mt-0.5">
+                        <h3 className="font-display font-black text-lg sm:text-xl text-slate-950 leading-tight mt-0.5 break-words line-clamp-2">
                           {quiz.title}
                         </h3>
                       </div>
@@ -385,11 +385,11 @@ export const TeacherQuizListPage = () => {
         <Modal
           isOpen={Boolean(quizToDelete)}
           onClose={() => setQuizToDelete(null)}
-          title="Hapus Kuis LMS?"
+          title="Hapus Kuis?"
         >
           <div className="space-y-4">
             <p className="text-sm text-slate-700">
-              Apakah Anda yakin ingin menghapus kuis <span className="font-bold">"{quizToDelete?.title}"</span> dari sistem LMS?
+              Apakah Anda yakin ingin menghapus kuis <span className="font-bold">"{quizToDelete?.title}"</span>?
               Tindakan ini akan menonaktifkan kuis secara soft delete.
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
