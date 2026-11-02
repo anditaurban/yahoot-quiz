@@ -73,9 +73,16 @@ export const TeacherGameLobbyPage = () => {
     }
   };
 
+  const currentHost = typeof window !== 'undefined' && window.location.host 
+    ? window.location.host 
+    : 'yahoot-quiz.anditaurban.workers.dev';
+  const joinUrl = typeof window !== 'undefined' && window.location.origin 
+    ? `${window.location.origin}/join` 
+    : 'https://yahoot-quiz.anditaurban.workers.dev/join';
+
   const handleCopyJoinLink = () => {
     if (!game?.code) return;
-    const url = `${window.location.origin}/join?pin=${game.code}`;
+    const url = `${joinUrl}?pin=${game.code}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -160,16 +167,48 @@ export const TeacherGameLobbyPage = () => {
         )}
 
         {/* Big Game Code Banner Card */}
-        <Card className="bg-amber-300 border-3 text-center shadow-block-xl py-8">
-          <p className="font-display font-black text-base sm:text-lg text-slate-900 mb-2">
-            Buka <span className="underline decoration-slate-900 font-mono font-bold">yahoot.app</span> di perangkat Anda lalu masukkan:
-          </p>
+        <Card className="bg-amber-300 border-3 text-center shadow-block-xl py-6 sm:py-8 px-4">
+          <div className="max-w-xl mx-auto space-y-3">
+            <p className="font-display font-black text-sm uppercase tracking-wider text-slate-800">
+              Instruksi Bergabung untuk Murid
+            </p>
 
-          <GameCode code={game.code} size="lg" />
+            {/* Direct Link Box */}
+            <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 bg-white border-2 border-slate-900 rounded-block px-4 py-2.5 shadow-block-sm max-w-full">
+              <span className="text-xs sm:text-sm font-bold text-slate-700 shrink-0">
+                Buka di browser gawai / laptop:
+              </span>
+              <a
+                href={joinUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono font-black text-sm sm:text-base text-indigo-700 hover:text-indigo-900 underline underline-offset-2 break-all"
+              >
+                {currentHost}/join
+              </a>
+            </div>
 
-          <p className="text-xs sm:text-sm font-semibold text-slate-700 mt-4">
-            Murid akan langsung muncul pada daftar di bawah begitu memasukkan nama panggilan.
-          </p>
+            <p className="text-xs sm:text-sm font-bold text-slate-800">
+              Lalu masukkan 5 digit Kode PIN di bawah ini:
+            </p>
+
+            <GameCode code={game.code} size="lg" />
+
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyJoinLink}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border-2 border-slate-900 rounded-block font-display font-bold text-xs text-slate-900 shadow-block-sm transition-all"
+              >
+                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <Share2 className="w-3.5 h-3.5" />}
+                <span>{copiedLink ? 'Link Langsung Masuk Disalin!' : 'Salin Link Langsung Masuk (?pin=...)'}</span>
+              </button>
+            </div>
+
+            <p className="text-xs font-semibold text-slate-700 mt-2">
+              Murid akan otomatis tampil di daftar peserta begitu memasukkan nama panggilan.
+            </p>
+          </div>
         </Card>
 
         {/* Joined Players Grid */}

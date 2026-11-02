@@ -125,11 +125,14 @@ export const TeacherGamePlayPage = () => {
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Top Header / Control Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="font-display font-black text-xs sm:text-sm bg-white border-2 border-slate-900 px-3 py-1 rounded-block shadow-block-sm">
               PIN: {game?.code}
             </span>
-            <span className="text-xs sm:text-sm font-bold text-slate-700">
+            <span className="font-mono text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded hidden sm:inline">
+              {typeof window !== 'undefined' && window.location.host ? window.location.host : 'yahoot-quiz.anditaurban.workers.dev'}/join
+            </span>
+            <span className="text-xs sm:text-sm font-bold text-slate-700 truncate max-w-xs sm:max-w-md">
               {game?.quizTitle}
             </span>
           </div>

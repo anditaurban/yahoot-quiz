@@ -62,7 +62,7 @@ export const PlayerList = ({
             Belum ada murid yang bergabung
           </p>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-sm">
-            Bagikan kode game atau minta murid membuka halaman join dan memasukkan kode.
+            Bagikan link langsung atau minta murid membuka halaman join dan memasukkan kode PIN.
           </p>
         </div>
       ) : (
