@@ -5,6 +5,7 @@ import { Gamepad2, GraduationCap, BookOpen } from 'lucide-react';
 export const Header = () => {
   const location = useLocation();
   const isTeacherArea = location.pathname.startsWith('/teacher');
+  const isStudentJoinOrPlay = location.pathname === '/join' || location.pathname.startsWith('/game');
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b-3 border-slate-900 shadow-sm">
@@ -22,45 +23,54 @@ export const Header = () => {
           </span>
         </Link>
 
-        {/* Navigation Switcher */}
-        <nav className="flex items-center gap-1.5 sm:gap-3" aria-label="Main Navigation">
-          <Link
-            to="/quizzes"
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
-              location.pathname === '/quizzes'
-                ? 'bg-amber-400 text-slate-950 shadow-block-sm'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 stroke-[2.5]" />
-            <span className="hidden xs:inline sm:inline">Kuis Mandiri</span>
-            <span className="xs:hidden sm:hidden">Kuis</span>
-          </Link>
+        {/* Navigation Switcher: Hidden on Student Join / Play pages */}
+        {!isStudentJoinOrPlay ? (
+          <nav className="flex items-center gap-1.5 sm:gap-3" aria-label="Main Navigation">
+            <Link
+              to="/quizzes"
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
+                location.pathname === '/quizzes'
+                  ? 'bg-amber-400 text-slate-950 shadow-block-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <BookOpen className="w-4 h-4 stroke-[2.5]" />
+              <span className="hidden xs:inline sm:inline">Kuis Mandiri</span>
+              <span className="xs:hidden sm:hidden">Kuis</span>
+            </Link>
 
-          <Link
-            to="/join"
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
-              location.pathname === '/join' || location.pathname.startsWith('/game')
-                ? 'bg-indigo-600 text-white shadow-block-sm'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <Gamepad2 className="w-4 h-4 stroke-[2.5]" />
-            <span>PIN Game</span>
-          </Link>
+            <Link
+              to="/join"
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
+                location.pathname === '/join' || location.pathname.startsWith('/game')
+                  ? 'bg-indigo-600 text-white shadow-block-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <Gamepad2 className="w-4 h-4 stroke-[2.5]" />
+              <span>PIN Game</span>
+            </Link>
 
-          <Link
-            to="/teacher"
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
-              isTeacherArea
-                ? 'bg-indigo-600 text-white shadow-block-sm'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4 stroke-[2.5]" />
-            <span>Guru</span>
-          </Link>
-        </nav>
+            <Link
+              to="/teacher"
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-display font-bold border-2 border-slate-900 rounded-block transition-all shrink-0 ${
+                isTeacherArea
+                  ? 'bg-indigo-600 text-white shadow-block-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4 stroke-[2.5]" />
+              <span>Guru</span>
+            </Link>
+          </nav>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 border-2 border-slate-900 rounded-block font-display font-black text-xs text-amber-950 shadow-block-sm">
+              <Gamepad2 className="w-4 h-4 text-amber-700 stroke-[2.5]" />
+              <span>Gabung Game</span>
+            </span>
+          </div>
+        )}
       </div>
     </header>
   );

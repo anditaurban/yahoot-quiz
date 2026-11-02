@@ -16,6 +16,7 @@ export const TeacherGameLobbyPage = () => {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedBaseLink, setCopiedBaseLink] = useState(false);
   const [error, setError] = useState('');
 
   // Fetch and poll lobby state
@@ -168,27 +169,42 @@ export const TeacherGameLobbyPage = () => {
 
         {/* Big Game Code Banner Card */}
         <Card className="bg-amber-300 border-3 text-center shadow-block-xl py-6 sm:py-8 px-4">
-          <div className="max-w-xl mx-auto space-y-3">
-            <p className="font-display font-black text-sm uppercase tracking-wider text-slate-800">
+          <div className="max-w-xl mx-auto space-y-4">
+            <p className="font-display font-black text-xs sm:text-sm uppercase tracking-wider text-slate-800">
               Instruksi Bergabung untuk Murid
             </p>
 
-            {/* Direct Link Box */}
-            <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 bg-white border-2 border-slate-900 rounded-block px-4 py-2.5 shadow-block-sm max-w-full">
-              <span className="text-xs sm:text-sm font-bold text-slate-700 shrink-0">
-                Buka di browser gawai / laptop:
+            {/* Direct Join Link Box */}
+            <div className="bg-white border-2 sm:border-3 border-slate-900 rounded-block px-4 py-3 shadow-block max-w-lg mx-auto">
+              <span className="text-[11px] sm:text-xs font-display font-black uppercase tracking-wider text-slate-500 block mb-1">
+                Buka Link di Browser HP / Laptop:
               </span>
-              <a
-                href={joinUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="font-mono font-black text-sm sm:text-base text-indigo-700 hover:text-indigo-900 underline underline-offset-2 break-all"
-              >
-                {currentHost}/join
-              </a>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                <a
+                  href={joinUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono font-black text-sm sm:text-lg text-indigo-700 hover:text-indigo-900 underline underline-offset-4 break-all select-all"
+                >
+                  {joinUrl}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(joinUrl);
+                    setCopiedBaseLink(true);
+                    setTimeout(() => setCopiedBaseLink(false), 2000);
+                  }}
+                  title="Salin Link Halaman Join"
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border-2 border-slate-900 rounded font-display font-bold text-xs text-slate-800 transition-all flex items-center gap-1 shrink-0"
+                >
+                  {copiedBaseLink ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedBaseLink ? 'Tersalin' : 'Salin'}</span>
+                </button>
+              </div>
             </div>
 
-            <p className="text-xs sm:text-sm font-bold text-slate-800">
+            <p className="text-xs sm:text-sm font-bold text-slate-900">
               Lalu masukkan 5 digit Kode PIN di bawah ini:
             </p>
 
@@ -201,7 +217,7 @@ export const TeacherGameLobbyPage = () => {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border-2 border-slate-900 rounded-block font-display font-bold text-xs text-slate-900 shadow-block-sm transition-all"
               >
                 {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> : <Share2 className="w-3.5 h-3.5" />}
-                <span>{copiedLink ? 'Link Langsung Masuk Disalin!' : 'Salin Link Langsung Masuk (?pin=...)'}</span>
+                <span>{copiedLink ? 'Link Otomatis Masuk Disalin!' : 'Salin Link Otomatis PIN (?pin=...)'}</span>
               </button>
             </div>
 

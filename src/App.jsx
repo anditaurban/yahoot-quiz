@@ -27,7 +27,7 @@ const AppLayout = () => {
 
   // Hide general header on student live play screen to optimize screen space for game controls
   const isStudentPlay = location.pathname.includes('/play') && !location.pathname.startsWith('/teacher');
-  const showFooter = !location.pathname.includes('/play') && !location.pathname.includes('/lobby');
+  const showFooter = !location.pathname.includes('/play') && !location.pathname.includes('/lobby') && location.pathname !== '/join';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900 font-sans">

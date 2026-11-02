@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Github } from 'lucide-react';
 
 const PixelHeart = () => (
   <svg
@@ -22,17 +23,18 @@ export const Footer = () => {
         </div>
 
         {/* Made with love by anditaurban */}
-        <div className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 border border-slate-300 rounded-md">
+        <div className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 border-2 border-slate-900 rounded-block shadow-block-sm">
           <span>Made with</span>
           <PixelHeart />
           <span>by</span>
           <a
-            href="https://instagram.com/anditaurban/"
+            href="https://github.com/anditaurban"
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-1 text-indigo-700 hover:text-indigo-900 hover:underline font-extrabold"
+            className="inline-flex items-center gap-1.5 ml-1.5 text-slate-900 hover:text-indigo-600 font-black transition-all group"
           >
-            anditaurban
+            <Github className="w-4 h-4 group-hover:scale-110 transition-transform" />
+            <span className="group-hover:underline">anditaurban</span>
           </a>
         </div>
 
