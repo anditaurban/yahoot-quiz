@@ -368,11 +368,21 @@ async function handleGameApi(request, url) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { playerId, questionIndex, answer } = body;
+    const { playerId, questionIndex, questionId, answer, optionId, responseTimeSeconds } = body;
 
-    const qIdx = questionIndex !== undefined ? Number(questionIndex) : (game.currentQuestionIndex || 0);
-    const currentQ = game.questions[qIdx];
+    let qIdx = game.currentQuestionIndex || 0;
+    if (questionId !== undefined) {
+      const foundIdx = (game.questions || []).findIndex(
+        (q) => String(q.id) === String(questionId) || String(q.question_id) === String(questionId)
+      );
+      if (foundIdx !== -1) {
+        qIdx = foundIdx;
+      }
+    } else if (questionIndex !== undefined) {
+      qIdx = Number(questionIndex);
+    }
 
+    const currentQ = (game.questions || [])[qIdx];
     if (!currentQ) {
       return errorResponse('Pertanyaan tidak valid.', 'INVALID_QUESTION', 400);
     }
@@ -380,20 +390,34 @@ async function handleGameApi(request, url) {
     game.answers = game.answers || {};
     game.answers[qIdx] = game.answers[qIdx] || {};
 
+    const rawAnswer = String(optionId !== undefined ? optionId : (answer !== undefined ? answer : '')).trim();
+
     if (game.answers[qIdx][playerId]) {
-      return errorResponse('Anda sudah mengirim jawaban untuk soal ini.', 'ALREADY_ANSWERED', 400);
+      const existing = game.answers[qIdx][playerId];
+      const p = (game.players || []).find((x) => x.id === playerId || x.playerId === playerId);
+      return jsonResponse({
+        data: {
+          accepted: false,
+          alreadyAnswered: true,
+          correct: existing.isCorrect,
+          isCorrect: existing.isCorrect,
+          points: existing.pointsEarned,
+          pointsEarned: existing.pointsEarned,
+          totalScore: p?.score || 0,
+          streak: p?.streak || 0,
+        },
+      });
     }
 
-    const rawAnswer = String(answer || '').trim();
     const expected = String(currentQ.correctOptionId || currentQ.correct_answer || '').trim();
     const isCorrect = rawAnswer.toLowerCase() === expected.toLowerCase();
 
     const timeLimit = Number(currentQ.timeLimit) || 20;
-    const elapsedSeconds = Math.max(0, (Date.now() - (game.questionStartedAt || Date.now())) / 1000);
+    const elapsedSeconds = Number(responseTimeSeconds) || Math.max(0, (Date.now() - (game.questionStartedAt || Date.now())) / 1000);
 
     let pointsEarned = 0;
     if (isCorrect) {
-      const speedRatio = Math.max(0, Math.min(1, 1 - (elapsedSeconds / timeLimit) * 0.5));
+      const speedRatio = Math.max(0, Math.min(1, 1 - (elapsedSeconds / (timeLimit * 2))));
       pointsEarned = Math.round(1000 * Math.max(0.5, speedRatio));
     }
 
@@ -404,18 +428,23 @@ async function handleGameApi(request, url) {
       submittedAt: new Date().toISOString(),
     };
 
-    const player = (game.players || []).find((p) => p.id === playerId);
+    const player = (game.players || []).find((p) => p.id === playerId || p.playerId === playerId);
     if (player) {
       player.score = (player.score || 0) + pointsEarned;
+      player.streak = isCorrect ? (player.streak || 0) + 1 : 0;
     }
 
     await persistGameSession(game);
 
     return jsonResponse({
       data: {
+        accepted: true,
+        correct: isCorrect,
         isCorrect,
+        points: pointsEarned,
         pointsEarned,
         totalScore: player?.score || 0,
+        streak: player?.streak || 0,
       },
     });
   }
@@ -480,15 +509,23 @@ async function handleGameApi(request, url) {
 
     const answersForQ = (game.answers && game.answers[qIndex]) || {};
     const optionCounts = { a: 0, b: 0, c: 0, d: 0, true: 0, false: 0 };
+    let totalCount = 0;
 
     Object.values(answersForQ).forEach((ans) => {
-      const opt = String(ans.optionId).toLowerCase();
-      optionCounts[opt] = (optionCounts[opt] || 0) + 1;
+      const opt = String(ans.optionId !== undefined ? ans.optionId : '').trim();
+      if (opt) {
+        totalCount += 1;
+        optionCounts[opt] = (optionCounts[opt] || 0) + 1;
+        const lower = opt.toLowerCase();
+        if (lower !== opt) {
+          optionCounts[lower] = (optionCounts[lower] || 0) + 1;
+        }
+      }
     });
 
     return jsonResponse({
       data: {
-        totalAnswers: Object.keys(answersForQ).length,
+        totalAnswers: totalCount,
         optionCounts,
       },
     });
@@ -507,9 +544,11 @@ async function handleGameApi(request, url) {
     const sortedPlayers = [...(game.players || [])]
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .map((p, idx) => ({
-        playerId: p.id,
+        playerId: p.id || p.playerId,
+        id: p.id || p.playerId,
         nickname: p.nickname,
         score: p.score || 0,
+        streak: p.streak || 0,
         rank: idx + 1,
       }));
 

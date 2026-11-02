@@ -6,6 +6,7 @@ export const Timer = ({
   isRunning = true,
   onTimeUp,
   size = 'md', // 'sm' | 'md' | 'lg'
+  className = '',
 }) => {
   const [timeLeft, setTimeLeft] = useState(duration);
 
@@ -39,53 +40,52 @@ export const Timer = ({
   const isUrgent = timeLeft <= 5 && timeLeft > 0;
   const isZero = timeLeft === 0;
 
-  // Color schemes
-  let colorBadge = "bg-emerald-400 text-slate-950";
-  let barColor = "bg-emerald-500";
-  if (isUrgent) {
-    colorBadge = "bg-red-500 text-white animate-pulse";
-    barColor = "bg-red-500";
-  } else if (timeLeft <= 10) {
-    colorBadge = "bg-amber-400 text-slate-950";
-    barColor = "bg-amber-400";
-  }
+  // Neo-brutalist styling & urgency color transitions
+  let badgeColor = 'bg-emerald-400 text-slate-950 border-slate-900';
+  let barColor = 'bg-emerald-500';
 
-  if (size === 'sm') {
-    return (
-      <div className="flex items-center gap-1.5 font-display font-black text-sm">
-        <Clock className="w-4 h-4" />
-        <span className={`px-2 py-0.5 border-2 border-slate-900 rounded-md ${colorBadge}`}>
-          {timeLeft}s
-        </span>
-      </div>
-    );
+  if (isUrgent) {
+    badgeColor = 'bg-red-500 text-white border-red-950 animate-pulse';
+    barColor = 'bg-red-500';
+  } else if (timeLeft <= Math.ceil(duration / 2)) {
+    badgeColor = 'bg-amber-300 text-slate-950 border-slate-900';
+    barColor = 'bg-amber-400';
   }
 
   return (
-    <div className="flex flex-col items-center gap-1.5 w-full max-w-[200px]">
-      <div className="flex items-center gap-2">
-        <div
-          className={`flex items-center justify-center font-display font-black border-2 border-slate-900 rounded-block shadow-block transition-all ${
-            size === 'lg' ? 'w-16 h-16 text-3xl' : 'w-12 h-12 text-2xl'
-          } ${colorBadge}`}
-        >
-          {timeLeft}
+    <div className={`w-full flex flex-col gap-1.5 ${className}`}>
+      {/* Top Countdown Label and Number Badge */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 font-display font-black text-xs sm:text-sm text-slate-900">
+          <Clock className={`w-4 h-4 shrink-0 ${isUrgent ? 'text-red-600 animate-bounce' : 'text-slate-800'}`} />
+          <span>Sisa Waktu:</span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`font-display font-black text-xs sm:text-sm px-2.5 py-0.5 border-2 rounded-block shadow-block-xs transition-colors shrink-0 ${badgeColor}`}
+          >
+            {isZero ? 'Waktu Habis!' : `${timeLeft} detik`}
+          </span>
+          <span className="text-[11px] font-bold text-slate-500 shrink-0 hidden sm:inline">
+            / {duration}s
+          </span>
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="w-full h-3 bg-slate-200 border-2 border-slate-900 rounded-full overflow-hidden">
+      {/* Progress Bar */}
+      <div
+        className="w-full h-3 sm:h-3.5 bg-slate-200 border-2 border-slate-900 rounded-full p-0.5 overflow-hidden shadow-block-xs"
+        role="progressbar"
+        aria-valuenow={timeLeft}
+        aria-valuemin={0}
+        aria-valuemax={duration}
+      >
         <div
-          className={`h-full transition-all duration-1000 ease-linear ${barColor}`}
+          className={`h-full rounded-full transition-all duration-1000 ease-linear ${barColor}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
-      
-      {isZero && (
-        <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">
-          Waktu Habis!
-        </span>
-      )}
     </div>
   );
 };
