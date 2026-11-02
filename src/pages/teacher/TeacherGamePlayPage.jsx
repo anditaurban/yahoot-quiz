@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Check,
@@ -11,7 +11,10 @@ import {
   ChevronDown,
   ChevronUp,
   Medal,
-  Award
+  Award,
+  Volume2,
+  VolumeX,
+  Music
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -40,6 +43,58 @@ export const TeacherGamePlayPage = () => {
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState('');
+  const [isPlayingSound, setIsPlayingSound] = useState(false);
+  const audioRef = useRef(null);
+
+  // Background Music (SpongeBob Closing Theme) on teacher side during quiz
+  useEffect(() => {
+    const audio = new Audio('/audio/spongebob-theme.mp3');
+    audio.loop = true;
+    audio.volume = 0.4;
+    audioRef.current = audio;
+
+    audio.onerror = () => {
+      // Fallback to original full name if needed
+      audio.src = encodeURI('/SpongeBob SquarePants Closing Theme Song (INCOMPLETE).mp3');
+    };
+
+    const tryAutoPlay = () => {
+      audio
+        .play()
+        .then(() => setIsPlayingSound(true))
+        .catch(() => {
+          // In case browser autoplay policy blocks unmuted audio before user interaction
+          const onFirstInteraction = () => {
+            audio
+              .play()
+              .then(() => setIsPlayingSound(true))
+              .catch(() => {});
+            window.removeEventListener('click', onFirstInteraction);
+          };
+          window.addEventListener('click', onFirstInteraction, { once: true });
+        });
+    };
+
+    tryAutoPlay();
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
+
+  const toggleSound = () => {
+    if (!audioRef.current) return;
+    if (isPlayingSound) {
+      audioRef.current.pause();
+      setIsPlayingSound(false);
+    } else {
+      audioRef.current
+        .play()
+        .then(() => setIsPlayingSound(true))
+        .catch(() => {});
+    }
+  };
 
   // Fetch and poll game and question state
   useEffect(() => {
@@ -99,6 +154,9 @@ export const TeacherGamePlayPage = () => {
   const handleRevealAnswer = async () => {
     setShowAnswer(true);
     setTimerRunning(false);
+    if (audioRef.current) {
+      audioRef.current.volume = 0.2;
+    }
     await setQuestionStatus(id, 'feedback');
   };
 
@@ -110,7 +168,13 @@ export const TeacherGamePlayPage = () => {
       const res = await nextQuestion(id);
       setShowAnswer(false);
       setTimerRunning(true);
+      if (audioRef.current && isPlayingSound) {
+        audioRef.current.volume = 0.4;
+      }
       if (res?.status === 'finished') {
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
         navigate(`/teacher/games/${id}/result`);
       }
     } catch (err) {
@@ -154,6 +218,26 @@ export const TeacherGamePlayPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant={isPlayingSound ? 'warning' : 'secondary'}
+              size="md"
+              onClick={toggleSound}
+              title={isPlayingSound ? 'Jeda Musik SpongeBob' : 'Putar Musik SpongeBob'}
+              className="flex items-center gap-1.5"
+            >
+              {isPlayingSound ? (
+                <>
+                  <Volume2 className="w-4 h-4 text-slate-950 animate-pulse" />
+                  <span>Musik On 🎵</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-4 h-4 text-slate-600" />
+                  <span>Musik Off</span>
+                </>
+              )}
+            </Button>
+
             {!showAnswer ? (
               <Button
                 variant="warning"

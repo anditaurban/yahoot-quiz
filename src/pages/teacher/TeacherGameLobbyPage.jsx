@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Play, Users, Sparkles, Share2, Copy, Check } from 'lucide-react';
+import { Play, Users, Sparkles, Share2, Copy, Check, Volume2, VolumeX } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -18,6 +18,37 @@ export const TeacherGameLobbyPage = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedBaseLink, setCopiedBaseLink] = useState(false);
   const [error, setError] = useState('');
+  const [isPlayingSound, setIsPlayingSound] = useState(false);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    const audio = new Audio('/audio/spongebob-theme.mp3');
+    audio.loop = true;
+    audio.volume = 0.35;
+    audioRef.current = audio;
+
+    audio.onerror = () => {
+      audio.src = encodeURI('/SpongeBob SquarePants Closing Theme Song (INCOMPLETE).mp3');
+    };
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
+
+  const toggleSound = () => {
+    if (!audioRef.current) return;
+    if (isPlayingSound) {
+      audioRef.current.pause();
+      setIsPlayingSound(false);
+    } else {
+      audioRef.current
+        .play()
+        .then(() => setIsPlayingSound(true))
+        .catch(() => {});
+    }
+  };
 
   // Fetch and poll lobby state
   useEffect(() => {
@@ -136,6 +167,26 @@ export const TeacherGameLobbyPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant={isPlayingSound ? 'warning' : 'secondary'}
+              size="md"
+              onClick={toggleSound}
+              title={isPlayingSound ? 'Jeda Musik Lobi SpongeBob' : 'Putar Musik Lobi SpongeBob'}
+              className="flex items-center gap-1.5"
+            >
+              {isPlayingSound ? (
+                <>
+                  <Volume2 className="w-4 h-4 text-slate-950 animate-pulse" />
+                  <span>Musik On 🎵</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-4 h-4 text-slate-600" />
+                  <span>Musik Off</span>
+                </>
+              )}
+            </Button>
+
             <Button
               variant="secondary"
               size="md"
