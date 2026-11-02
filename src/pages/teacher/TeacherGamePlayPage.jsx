@@ -10,11 +10,10 @@ import {
   Flame,
   ChevronDown,
   ChevronUp,
-  Medal,
   Award,
   Volume2,
   VolumeX,
-  Music
+  Play
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -29,6 +28,42 @@ import {
   getResults
 } from '../../services/api/games';
 
+// Matching Student Color Palette (Kahoot-Style)
+const TEACHER_OPTION_STYLES = [
+  {
+    symbol: '▲ A',
+    label: 'A',
+    bg: 'bg-red-500 text-white',
+    badge: 'bg-red-700 text-white',
+    ring: 'ring-4 ring-emerald-300 ring-offset-2',
+    progressBg: 'bg-white',
+  },
+  {
+    symbol: '◆ B',
+    label: 'B',
+    bg: 'bg-blue-600 text-white',
+    badge: 'bg-blue-800 text-white',
+    ring: 'ring-4 ring-emerald-300 ring-offset-2',
+    progressBg: 'bg-white',
+  },
+  {
+    symbol: '● C',
+    label: 'C',
+    bg: 'bg-amber-400 text-slate-950',
+    badge: 'bg-amber-600 text-slate-950',
+    ring: 'ring-4 ring-emerald-400 ring-offset-2',
+    progressBg: 'bg-slate-900',
+  },
+  {
+    symbol: '■ D',
+    label: 'D',
+    bg: 'bg-emerald-500 text-slate-950',
+    badge: 'bg-emerald-700 text-white',
+    ring: 'ring-4 ring-white ring-offset-2',
+    progressBg: 'bg-slate-900',
+  },
+];
+
 export const TeacherGamePlayPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -36,47 +71,65 @@ export const TeacherGamePlayPage = () => {
   const [game, setGame] = useState(null);
   const [question, setQuestion] = useState(null);
   const [answerStats, setAnswerStats] = useState({ totalAnswers: 0, optionCounts: {} });
-  const [showAnswer, setShowAnswer] = useState(false);
+  
+  // Game Flow Phases: 'question' (Soal) -> 'reveal' (Jawaban Benar) -> 'leaderboard' (Klasemen) -> next
+  const [roundPhase, setRoundPhase] = useState('question');
+  
   const [timerRunning, setTimerRunning] = useState(true);
   const [leaderboard, setLeaderboard] = useState([]);
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState('');
-  const [isPlayingSound, setIsPlayingSound] = useState(false);
+  
+  const [isPlayingSound, setIsPlayingSound] = useState(true);
   const audioRef = useRef(null);
+  const fanfareRef = useRef(null);
 
-  // Background Music (SpongeBob Closing Theme) on teacher side during quiz
+  // Background Music (SpongeBob Closing Theme) during Question Answering
   useEffect(() => {
     const audio = new Audio('/audio/spongebob-theme.mp3');
     audio.loop = true;
     audio.volume = 0.4;
     audioRef.current = audio;
 
-    const tryAutoPlay = () => {
+    const fanfare = new Audio('/audio/reveal-fanfare.wav');
+    fanfare.volume = 0.6;
+    fanfareRef.current = fanfare;
+
+    const startAudio = () => {
       audio
         .play()
         .then(() => setIsPlayingSound(true))
         .catch(() => {
-          // In case browser autoplay policy blocks unmuted audio before user interaction
-          const onFirstInteraction = () => {
-            audio
-              .play()
-              .then(() => setIsPlayingSound(true))
-              .catch(() => {});
-            window.removeEventListener('click', onFirstInteraction);
+          const onFirstClick = () => {
+            audio.play().then(() => setIsPlayingSound(true)).catch(() => {});
+            window.removeEventListener('click', onFirstClick);
           };
-          window.addEventListener('click', onFirstInteraction, { once: true });
+          window.addEventListener('click', onFirstClick, { once: true });
         });
     };
 
-    tryAutoPlay();
+    startAudio();
 
     return () => {
       audio.pause();
       audio.currentTime = 0;
+      fanfare.pause();
+      fanfare.currentTime = 0;
     };
   }, []);
+
+  const playFanfare = () => {
+    try {
+      if (fanfareRef.current) {
+        fanfareRef.current.currentTime = 0;
+        fanfareRef.current.play().catch(() => {});
+      }
+    } catch {
+      // Audio autoplay restrictions
+    }
+  };
 
   const toggleSound = () => {
     if (!audioRef.current) return;
@@ -118,7 +171,19 @@ export const TeacherGamePlayPage = () => {
           return;
         }
 
-        setQuestion(qData);
+        // Detect if question advanced to a new one
+        if (question && qData.id !== question.id) {
+          setQuestion(qData);
+          setRoundPhase('question');
+          setTimerRunning(true);
+          // Restart SpongeBob sound for new question
+          if (audioRef.current && isPlayingSound) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(() => {});
+          }
+        } else {
+          setQuestion(qData);
+        }
 
         // Fetch answer statistics for this question
         const stats = await getAnswersStats(id, qData.index);
@@ -128,6 +193,13 @@ export const TeacherGamePlayPage = () => {
         const res = await getResults(id);
         if (res?.players) {
           setLeaderboard(res.players);
+        }
+
+        // Competitive flow: Auto-transition to 'reveal' when all players have answered
+        const totalP = (gameData.players && gameData.players.length > 0) ? gameData.players.length : 0;
+        const totalAns = stats?.totalAnswers || 0;
+        if (roundPhase === 'question' && totalP > 0 && totalAns >= totalP) {
+          transitionToReveal();
         }
       } catch (err) {
         if (!isMounted) return;
@@ -144,28 +216,51 @@ export const TeacherGamePlayPage = () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [id, navigate]);
+  }, [id, question, roundPhase, isPlayingSound, navigate]);
 
-  const handleRevealAnswer = async () => {
-    setShowAnswer(true);
+  // Transition Step 1 -> Step 2: SOAL -> JAWABAN BENAR (Reveal)
+  const transitionToReveal = async () => {
+    setRoundPhase('reveal');
     setTimerRunning(false);
+
+    // Stop SpongeBob sound
     if (audioRef.current) {
-      audioRef.current.volume = 0.2;
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
+
+    // Play reveal fanfare SFX!
+    playFanfare();
+
+    // Notify backend & student devices to reveal their results
     await setQuestionStatus(id, 'feedback');
   };
 
+  // Transition Step 2 -> Step 3: JAWABAN BENAR -> KLASEMEN SEMENTARA
+  const transitionToLeaderboard = () => {
+    setRoundPhase('leaderboard');
+  };
+
+  // Transition Step 3 -> Step 4: KLASEMEN SEMENTARA -> SOAL BERIKUTNYA
   const handleNext = async () => {
     setAdvancing(true);
     setError('');
     setShowAllLeaderboard(false);
     try {
       const res = await nextQuestion(id);
-      setShowAnswer(false);
+      setRoundPhase('question');
       setTimerRunning(true);
-      if (audioRef.current && isPlayingSound) {
-        audioRef.current.volume = 0.4;
+
+      // Stop any lingering fanfare and START SPONGEBOB AGAIN from the beginning!
+      if (fanfareRef.current) {
+        fanfareRef.current.pause();
+        fanfareRef.current.currentTime = 0;
       }
+      if (audioRef.current && isPlayingSound) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      }
+
       if (res?.status === 'finished') {
         if (audioRef.current) {
           audioRef.current.pause();
@@ -213,6 +308,7 @@ export const TeacherGamePlayPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Sound Toggle Button */}
             <Button
               variant={isPlayingSound ? 'warning' : 'secondary'}
               size="md"
@@ -233,23 +329,39 @@ export const TeacherGamePlayPage = () => {
               )}
             </Button>
 
-            {!showAnswer ? (
+            {/* Step Sequence Actions */}
+            {roundPhase === 'question' && (
               <Button
                 variant="warning"
                 size="md"
-                onClick={handleRevealAnswer}
+                onClick={transitionToReveal}
                 className="flex items-center gap-1.5"
               >
                 <Eye className="w-4 h-4" />
                 <span>Kunci Jawaban</span>
               </Button>
-            ) : (
+            )}
+
+            {roundPhase === 'reveal' && (
+              <Button
+                variant="primary"
+                size="md"
+                onClick={transitionToLeaderboard}
+                className="flex items-center gap-1.5 bg-indigo-600 text-white border-2 border-slate-900 shadow-block"
+              >
+                <Trophy className="w-4 h-4 text-amber-300" />
+                <span>Lihat Klasemen</span>
+                <ArrowRight className="w-4 h-4 stroke-[3]" />
+              </Button>
+            )}
+
+            {roundPhase === 'leaderboard' && (
               <Button
                 variant="primary"
                 size="md"
                 loading={advancing}
                 onClick={handleNext}
-                className="flex items-center gap-1.5"
+                className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black border-2 border-slate-900 shadow-block"
               >
                 <span>{isLastQuestion ? 'Lihat Hasil Akhir' : 'Soal Berikutnya'}</span>
                 <ArrowRight className="w-4 h-4 stroke-[3]" />
@@ -265,211 +377,265 @@ export const TeacherGamePlayPage = () => {
           </div>
         )}
 
-        {/* Question Card with Timer */}
-        <QuestionCard
-          question={question.question}
-          currentIndex={question.index}
-          totalQuestions={game?.totalQuestions || 1}
-          timeLimit={question.timeLimit}
-          type={question.type}
-          timerRunning={timerRunning}
-          onTimeUp={() => {
-            setTimerRunning(false);
-            setShowAnswer(true);
-            setQuestionStatus(id, 'feedback');
-          }}
-          showTimer={!showAnswer}
-        />
+        {/* ========================================================
+            TAHAP 1 & 2: SOAL & PEMBAHASAN JAWABAN BENAR
+           ======================================================== */}
+        {(roundPhase === 'question' || roundPhase === 'reveal') && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Question Card with Timer */}
+            <QuestionCard
+              question={question.question}
+              currentIndex={question.index}
+              totalQuestions={game?.totalQuestions || 1}
+              timeLimit={question.timeLimit}
+              type={question.type}
+              timerRunning={timerRunning}
+              onTimeUp={() => {
+                if (roundPhase === 'question') {
+                  transitionToReveal();
+                }
+              }}
+              showTimer={roundPhase === 'question'}
+            />
 
-        {/* Live Answer Status Tracker */}
-        <div className="flex items-center justify-between p-3.5 bg-white border-2 border-slate-900 rounded-block shadow-block">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-indigo-100 text-indigo-900 border border-slate-900 rounded-md">
-              <Users className="w-4 h-4 stroke-[2.5]" />
-            </div>
-            <span className="font-display font-bold text-sm text-slate-900">
-              Respons Murid:
-            </span>
-            <span className="font-display font-black text-sm bg-amber-300 border border-slate-900 px-2 py-0.5 rounded">
-              {answerStats.totalAnswers || 0} / {totalPlayers} Terjawab
-            </span>
-          </div>
+            {/* Live Answer Status Tracker */}
+            <div className="flex items-center justify-between p-3.5 bg-white border-2 border-slate-900 rounded-block shadow-block">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-100 text-indigo-900 border border-slate-900 rounded-md">
+                  <Users className="w-4 h-4 stroke-[2.5]" />
+                </div>
+                <span className="font-display font-bold text-sm text-slate-900">
+                  Respons Murid:
+                </span>
+                <span className="font-display font-black text-sm bg-amber-300 border border-slate-900 px-2 py-0.5 rounded">
+                  {answerStats.totalAnswers || 0} / {totalPlayers} Terjawab
+                </span>
+              </div>
 
-          <span className="text-xs font-bold text-slate-600">
-            {showAnswer ? 'Kunci & Persentase Ditampilkan' : 'Kuis Sedang Berjalan'}
-          </span>
-        </div>
-
-        {/* Options Breakdown Grid with Real-Time Percentage */}
-        {question.type === 'short_answer' ? (
-          <div
-            className={`p-6 border-3 border-slate-900 rounded-block shadow-block transition-all ${
-              showAnswer ? 'bg-emerald-100 ring-4 ring-emerald-500' : 'bg-white'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <Badge variant="warning" size="md">
-                TIPE KETIK (Isian Singkat)
-              </Badge>
-              {showAnswer && (
-                <Badge variant="success" size="md">
-                  KUNCI JAWABAN TEPAT
-                </Badge>
-              )}
-            </div>
-
-            <p className="text-xs uppercase font-bold text-slate-500 tracking-wide mb-1">
-              Kunci Jawaban yang Diharapkan:
-            </p>
-            <p className="font-display font-black text-2xl sm:text-3xl text-slate-950 break-words">
-              {showAnswer
-                ? `"${question.correctOptionId || question.correct_answer}"`
-                : '•••••••••••• (Tersembunyi)'}
-            </p>
-            <p className="text-xs text-slate-600 mt-2 font-medium">
-              Siswa menjawab langsung dengan mengetik teks di gawai mereka dan dicocokkan secara case-insensitive.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display font-black text-sm sm:text-base text-slate-900">
-                Distribusi Jawaban Murid:
-              </h3>
-              <span className="text-xs font-semibold text-slate-500">
-                {showAnswer ? 'Hasil Akhir Ronde Ini' : 'Real-time'}
+              <span className="text-xs font-bold text-slate-700">
+                {roundPhase === 'reveal'
+                  ? '🎉 Kunci Jawaban Ditampilkan'
+                  : '⏳ Kuis Sedang Berjalan (Alur Kompetitif)'}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(question.options || []).map((opt, idx) => {
-                const isCorrect = String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase();
-                const counts = answerStats?.optionCounts || {};
-                const count = counts[opt.id] ?? counts[String(opt.id).toLowerCase()] ?? 0;
-                const percentage = totalPlayers > 0 ? Math.round((count / totalPlayers) * 100) : 0;
+            {/* Options Breakdown Grid with Matching Student Colors */}
+            {question.type === 'short_answer' ? (
+              <div
+                className={`p-6 border-3 border-slate-900 rounded-block shadow-block transition-all ${
+                  roundPhase === 'reveal' ? 'bg-emerald-100 ring-4 ring-emerald-500' : 'bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <Badge variant="warning" size="md">
+                    TIPE KETIK (Isian Singkat)
+                  </Badge>
+                  {roundPhase === 'reveal' && (
+                    <Badge variant="success" size="md">
+                      KUNCI JAWABAN TEPAT
+                    </Badge>
+                  )}
+                </div>
 
-                const symbols = ['▲ A', '◆ B', '● C', '■ D'];
-                const symbol =
-                  question.type === 'true_false'
-                    ? opt.id === 'true'
-                      ? '✓ TRUE'
-                      : '✕ FALSE'
-                    : symbols[idx % symbols.length];
+                <p className="text-xs uppercase font-bold text-slate-500 tracking-wide mb-1">
+                  Kunci Jawaban yang Diharapkan:
+                </p>
+                <p className="font-display font-black text-2xl sm:text-3xl text-slate-950 break-words">
+                  {roundPhase === 'reveal'
+                    ? `"${question.correctOptionId || question.correct_answer}"`
+                    : '•••••••••••• (Tersembunyi)'}
+                </p>
+                <p className="text-xs text-slate-600 mt-2 font-medium">
+                  Siswa menjawab langsung dengan mengetik teks di gawai mereka dan dicocokkan secara case-insensitive.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-black text-sm sm:text-base text-slate-900">
+                    {roundPhase === 'reveal' ? 'Distribusi Jawaban & Kunci:' : 'Pilihan Jawaban:'}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-600">
+                    {roundPhase === 'reveal' ? 'Hasil Akhir Ronde Ini' : 'Warna Seragam Murid'}
+                  </span>
+                </div>
 
-                return (
-                  <div
-                    key={opt.id}
-                    className={`p-4 border-3 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
-                      showAnswer && isCorrect
-                        ? 'bg-emerald-300 ring-4 ring-emerald-500'
-                        : 'bg-white'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <span className="font-display font-black text-sm px-2.5 py-1 bg-slate-900 text-white rounded shadow-sm">
-                        {symbol}
-                      </span>
-                      {showAnswer && isCorrect ? (
-                        <Badge variant="success" size="sm" className="font-black">
-                          KUNCI BENAR ✓
-                        </Badge>
-                      ) : (
-                        <span className="font-display font-black text-sm text-slate-900 bg-slate-100 border border-slate-900 px-2 py-0.5 rounded">
-                          {percentage}%
-                        </span>
-                      )}
-                    </div>
+                {/* 2x2 Grid of Colored Options Matching Student UI */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(question.options || []).map((opt, idx) => {
+                    const isCorrect = String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase();
+                    const counts = answerStats?.optionCounts || {};
+                    const count = counts[opt.id] ?? counts[String(opt.id).toLowerCase()] ?? 0;
+                    const percentage = totalPlayers > 0 ? Math.round((count / totalPlayers) * 100) : 0;
 
-                    <p className="font-display font-bold text-base sm:text-lg text-slate-950 mb-3 break-words">
-                      {opt.text}
-                    </p>
+                    let optTheme = TEACHER_OPTION_STYLES[idx % TEACHER_OPTION_STYLES.length];
+                    if (question.type === 'true_false') {
+                      if (String(opt.id).toLowerCase() === 'true') {
+                        optTheme = {
+                          symbol: '✓ TRUE',
+                          bg: 'bg-emerald-500 text-slate-950',
+                          badge: 'bg-emerald-700 text-white',
+                          ring: 'ring-4 ring-white ring-offset-2',
+                          progressBg: 'bg-slate-900',
+                        };
+                      } else {
+                        optTheme = {
+                          symbol: '✕ FALSE',
+                          bg: 'bg-red-500 text-white',
+                          badge: 'bg-red-700 text-white',
+                          ring: 'ring-4 ring-emerald-300 ring-offset-2',
+                          progressBg: 'bg-white',
+                        };
+                      }
+                    }
 
-                    {/* Response Bar & Percent Indicator */}
-                    <div className="pt-2 border-t-2 border-slate-900/10 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                        <span>{count} / {totalPlayers} Murid</span>
-                        <span className="font-display font-black text-sm text-slate-950">{percentage}%</span>
+                    const isDimmed = roundPhase === 'reveal' && !isCorrect;
+
+                    return (
+                      <div
+                        key={opt.id}
+                        className={`p-4 sm:p-5 border-3 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
+                          optTheme.bg
+                        } ${
+                          roundPhase === 'reveal' && isCorrect
+                            ? `${optTheme.ring} scale-[1.02] shadow-block-lg`
+                            : ''
+                        } ${isDimmed ? 'opacity-50 grayscale-[25%]' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <span className="font-display font-black text-sm px-2.5 py-1 bg-black/25 border-2 border-black/30 rounded-block shadow-sm">
+                            {optTheme.symbol}
+                          </span>
+
+                          {roundPhase === 'reveal' && isCorrect ? (
+                            <Badge variant="success" size="sm" className="font-black bg-white text-emerald-800 border-2 border-slate-900 shadow-block-xs">
+                              KUNCI BENAR ✓
+                            </Badge>
+                          ) : (
+                            <span className="font-display font-black text-xs px-2 py-0.5 bg-black/20 rounded">
+                              {percentage}%
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="font-display font-bold text-base sm:text-xl mb-4 break-words leading-snug">
+                          {opt.text}
+                        </p>
+
+                        {/* Response Percentage Bar */}
+                        <div className="pt-2 border-t-2 border-black/15 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span>{count} / {totalPlayers} Murid</span>
+                            <span className="font-display font-black text-sm">{percentage}%</span>
+                          </div>
+                          <div className="w-full h-3 bg-black/20 border-2 border-black/30 rounded-full overflow-hidden p-0.5">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${optTheme.progressBg}`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="w-full h-3 bg-slate-100 border-2 border-slate-900 rounded-full overflow-hidden p-0.5 shadow-block-xs">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            isCorrect && showAnswer
-                              ? 'bg-emerald-600'
-                              : 'bg-indigo-600'
-                          }`}
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Action to proceed to Leaderboard */}
+            {roundPhase === 'reveal' && (
+              <div className="text-center pt-2">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={transitionToLeaderboard}
+                  className="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-display font-black text-base border-3 border-slate-900 shadow-block flex items-center justify-center gap-2 mx-auto"
+                >
+                  <Trophy className="w-5 h-5 text-amber-300" />
+                  <span>Lanjutkan ke Klasemen Sementara</span>
+                  <ArrowRight className="w-5 h-5 stroke-[3]" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Interim Leaderboard: Top 3 & Expandable List */}
-        {showAnswer && leaderboard.length > 0 && (
-          <Card className="bg-white border-3 border-slate-900 shadow-block-lg p-5 sm:p-6 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-slate-900 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-amber-400 border-2 border-slate-900 rounded-block shadow-block-xs">
-                  <Trophy className="w-5 h-5 text-slate-950" />
+        {/* ========================================================
+            TAHAP 3: KLASEMEN SEMENTARA (FULL FOCUS LEADERBOARD)
+           ======================================================== */}
+        {roundPhase === 'leaderboard' && (
+          <Card className="bg-white border-3 border-slate-900 shadow-block-xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-3 border-slate-900 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-400 border-2 border-slate-900 rounded-block shadow-block-xs">
+                  <Trophy className="w-7 h-7 text-slate-950" />
                 </div>
                 <div>
-                  <h3 className="font-display font-black text-lg sm:text-xl text-slate-950">
+                  <h2 className="font-display font-black text-2xl sm:text-3xl text-slate-950">
                     Klasemen Sementara
-                  </h3>
-                  <p className="text-xs font-semibold text-slate-600">
-                    Peringkat teratas setelah Soal {question.index + 1}
+                  </h2>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-600">
+                    Peringkat perolehan skor setelah Soal {question.index + 1}
                   </p>
                 </div>
               </div>
 
-              <span className="text-xs font-bold text-slate-700 bg-slate-100 border border-slate-900 px-2.5 py-1 rounded-block self-start sm:self-auto">
-                Total {leaderboard.length} Murid
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-700 bg-slate-100 border-2 border-slate-900 px-3 py-1 rounded-block">
+                  {leaderboard.length} Murid
+                </span>
+
+                <Button
+                  variant="primary"
+                  size="md"
+                  loading={advancing}
+                  onClick={handleNext}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black border-2 border-slate-900 shadow-block flex items-center gap-1.5"
+                >
+                  <span>{isLastQuestion ? 'Lihat Hasil Akhir' : 'Soal Berikutnya'}</span>
+                  <ArrowRight className="w-4 h-4 stroke-[3]" />
+                </Button>
+              </div>
             </div>
 
-            {/* TOP 3 PODIUM CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            {/* TOP 3 PODIUM */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
               {top3.map((p, idx) => {
                 const isFirst = idx === 0;
                 const isSecond = idx === 1;
-                const isThird = idx === 2;
 
                 const bgStyle = isFirst
-                  ? 'bg-amber-300 border-3 border-slate-900 shadow-block'
+                  ? 'bg-amber-300 border-3 border-slate-900 shadow-block-lg sm:-translate-y-2'
                   : isSecond
-                  ? 'bg-slate-200 border-3 border-slate-900 shadow-block-sm'
-                  : 'bg-amber-100 border-3 border-slate-900 shadow-block-sm';
+                  ? 'bg-slate-200 border-3 border-slate-900 shadow-block'
+                  : 'bg-amber-100 border-3 border-slate-900 shadow-block';
 
                 const badgeText = isFirst ? '🥇 JUARA 1' : isSecond ? '🥈 JUARA 2' : '🥉 JUARA 3';
 
                 return (
                   <div
                     key={p.playerId || p.id}
-                    className={`p-4 rounded-block font-display flex flex-col justify-between ${bgStyle}`}
+                    className={`p-5 rounded-block font-display flex flex-col justify-between ${bgStyle} transition-transform`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-display font-black text-xs px-2 py-0.5 bg-slate-900 text-white rounded">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-display font-black text-xs px-2.5 py-1 bg-slate-900 text-white rounded shadow-sm">
                         {badgeText}
                       </span>
                       {p.streak > 1 && (
-                        <span className="flex items-center gap-1 text-[11px] font-black text-rose-700 bg-white/80 border border-slate-900 px-1.5 py-0.5 rounded">
-                          <Flame className="w-3 h-3 fill-rose-500 text-rose-600" />
+                        <span className="flex items-center gap-1 text-xs font-black text-rose-700 bg-white/90 border border-slate-900 px-2 py-0.5 rounded shadow-xs">
+                          <Flame className="w-3.5 h-3.5 fill-rose-500 text-rose-600" />
                           {p.streak}x
                         </span>
                       )}
                     </div>
 
-                    <h4 className="font-display font-black text-lg sm:text-xl text-slate-950 truncate my-1">
+                    <h4 className="font-display font-black text-xl sm:text-2xl text-slate-950 truncate my-2">
                       {p.nickname}
                     </h4>
 
-                    <div className="mt-2 pt-2 border-t-2 border-slate-900/20 flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-700">Skor:</span>
-                      <span className="font-display font-black text-lg text-slate-950">
+                    <div className="mt-3 pt-3 border-t-2 border-slate-900/20 flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Skor Total:</span>
+                      <span className="font-display font-black text-xl text-slate-950">
                         {p.score} pt
                       </span>
                     </div>
@@ -483,9 +649,9 @@ export const TeacherGamePlayPage = () => {
               <div className="pt-2">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="md"
                   onClick={() => setShowAllLeaderboard((prev) => !prev)}
-                  className="w-full flex items-center justify-center gap-2 border-2 border-slate-900"
+                  className="w-full flex items-center justify-center gap-2 border-2 border-slate-900 font-bold"
                 >
                   <Award className="w-4 h-4 text-indigo-600" />
                   <span>
@@ -505,25 +671,25 @@ export const TeacherGamePlayPage = () => {
                     {restPlayers.map((p, idx) => (
                       <div
                         key={p.playerId || p.id}
-                        className="flex items-center justify-between p-3 bg-white hover:bg-slate-50 transition-colors"
+                        className="flex items-center justify-between p-3.5 bg-white hover:bg-slate-50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <span className="w-7 h-7 rounded-full bg-slate-200 border-2 border-slate-900 flex items-center justify-center font-display font-black text-xs text-slate-800">
                             #{idx + 4}
                           </span>
-                          <span className="font-display font-bold text-sm text-slate-900 truncate max-w-[180px] sm:max-w-xs">
+                          <span className="font-display font-bold text-sm sm:text-base text-slate-900 truncate max-w-[180px] sm:max-w-xs">
                             {p.nickname}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-3">
                           {p.streak > 1 && (
-                            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
-                              <Flame className="w-3 h-3 fill-rose-500 text-rose-600" />
+                            <span className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
+                              <Flame className="w-3.5 h-3.5 fill-rose-500 text-rose-600" />
                               {p.streak}x
                             </span>
                           )}
-                          <span className="font-display font-black text-sm text-slate-950 bg-amber-100 border border-slate-900 px-2.5 py-0.5 rounded shadow-block-xs">
+                          <span className="font-display font-black text-sm sm:text-base text-slate-950 bg-amber-100 border border-slate-900 px-2.5 py-0.5 rounded shadow-block-xs">
                             {p.score} pt
                           </span>
                         </div>
@@ -533,6 +699,20 @@ export const TeacherGamePlayPage = () => {
                 )}
               </div>
             )}
+
+            {/* Bottom Proceed Button */}
+            <div className="pt-4 border-t-2 border-slate-100 text-center">
+              <Button
+                variant="primary"
+                size="lg"
+                loading={advancing}
+                onClick={handleNext}
+                className="w-full sm:w-auto px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-display font-black text-base border-3 border-slate-900 shadow-block flex items-center justify-center gap-2 mx-auto"
+              >
+                <span>{isLastQuestion ? 'Lihat Hasil Akhir Kuis' : 'Lanjutkan ke Soal Berikutnya'}</span>
+                <ArrowRight className="w-5 h-5 stroke-[3]" />
+              </Button>
+            </div>
           </Card>
         )}
       </div>

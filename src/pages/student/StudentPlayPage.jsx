@@ -292,103 +292,35 @@ export const StudentPlayPage = () => {
         )
       )}
 
-      {/* STATE 3: ANSWERED (BENAR ATAU SALAH DARI JAWABAN YANG DIKIRIMKAN) */}
+      {/* STATE 3: ANSWERED (ALUR KOMPETITIF: MENUNGGU SEMUA SELESAI / WAKTU HABIS) */}
       {gameState === 'answered' && (
-        <div className="my-auto text-center animate-in fade-in zoom-in-95 py-4">
-          {!answerFeedback ? (
-            <Card className="max-w-md mx-auto bg-amber-200 border-3 border-slate-900 shadow-block-lg p-6 sm:p-8">
-              <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <h3 className="font-display font-black text-xl text-slate-950 mb-1">
-                Memproses Jawaban...
-              </h3>
-              <p className="text-xs font-semibold text-slate-700">
-                Mengirim respons ke server kuis...
-              </p>
-            </Card>
-          ) : answerFeedback.correct ? (
-            <Card className="max-w-md mx-auto bg-emerald-400 border-3 border-slate-900 shadow-block-lg p-6 sm:p-8">
-              {/* Benar Icon Badge */}
-              <div className="w-16 h-16 bg-white border-3 border-slate-900 rounded-block mx-auto flex items-center justify-center text-emerald-600 mb-4 shadow-block-sm">
-                <Check className="w-10 h-10 stroke-[3.5]" />
-              </div>
+        <div className="my-auto text-center animate-in fade-in zoom-in-95 py-6">
+          <Card className="max-w-md mx-auto bg-amber-300 border-3 border-slate-900 shadow-block-lg p-6 sm:p-8">
+            <div className="w-16 h-16 bg-white border-3 border-slate-900 rounded-block mx-auto flex items-center justify-center text-slate-950 mb-4 shadow-block-sm">
+              <Check className="w-9 h-9 stroke-[3.5] text-emerald-600" />
+            </div>
 
-              <span className="inline-block px-3 py-1 bg-white border-2 border-slate-900 rounded-full font-display font-black text-xs uppercase tracking-wider text-emerald-800 mb-2 shadow-block-xs">
-                Status Jawaban
+            <h3 className="font-display font-black text-2xl sm:text-3xl text-slate-950 mb-1">
+              Jawaban Terkirim!
+            </h3>
+
+            <div className="p-3 bg-white/95 border-2 border-slate-900 rounded-block text-left text-xs text-slate-800 my-4 shadow-block-xs">
+              <span className="font-bold text-slate-600 block mb-0.5">Pilihan kamu:</span>
+              <span className="font-display font-black text-sm sm:text-base text-slate-950 break-words">
+                "{answerFeedback?.selectedText || typedAnswer || selectedOptionId}"
               </span>
+            </div>
 
-              <h3 className="font-display font-black text-2xl sm:text-3xl text-slate-950 mb-2">
-                JAWABAN BENAR! 🎉
-              </h3>
+            <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed">
+              ⏳ Menunggu semua peserta selesai menjawab atau waktu habis untuk melihat hasilnya...
+            </p>
 
-              <div className="my-3 flex flex-wrap items-center justify-center gap-2">
-                <span className="font-display font-black text-base sm:text-lg bg-white border-2 border-slate-900 px-3 py-1 rounded-block shadow-block-xs text-emerald-700">
-                  +{answerFeedback.points} Poin
-                </span>
-                <span className="font-display font-black text-base sm:text-lg bg-rose-100 border-2 border-slate-900 px-3 py-1 rounded-block shadow-block-xs text-rose-800 flex items-center gap-1">
-                  <Flame className="w-4 h-4 fill-rose-500 text-rose-600" />
-                  {answerFeedback.streak}x Beruntun
-                </span>
-              </div>
-
-              <div className="p-3 bg-white/90 border-2 border-slate-900 rounded-block text-left text-xs text-slate-800 mb-4 shadow-block-xs">
-                <span className="font-bold text-slate-600 block mb-0.5">Jawaban yang kamu kirim:</span>
-                <span className="font-display font-black text-sm text-slate-950 break-words">
-                  "{answerFeedback.selectedText}"
-                </span>
-              </div>
-
-              <p className="text-xs font-bold text-slate-900">
-                Keren! Menunggu giliran guru membuka soal berikutnya...
-              </p>
-
-              <div className="mt-4 pt-3 border-t-2 border-slate-900/20 flex items-center justify-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce" />
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce delay-100" />
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce delay-200" />
-              </div>
-            </Card>
-          ) : (
-            <Card className="max-w-md mx-auto bg-rose-200 border-3 border-slate-900 shadow-block-lg p-6 sm:p-8">
-              {/* Salah Icon Badge */}
-              <div className="w-16 h-16 bg-white border-3 border-slate-900 rounded-block mx-auto flex items-center justify-center text-rose-600 mb-4 shadow-block-sm">
-                <X className="w-10 h-10 stroke-[3.5]" />
-              </div>
-
-              <span className="inline-block px-3 py-1 bg-white border-2 border-slate-900 rounded-full font-display font-black text-xs uppercase tracking-wider text-rose-800 mb-2 shadow-block-xs">
-                Status Jawaban
-              </span>
-
-              <h3 className="font-display font-black text-2xl sm:text-3xl text-rose-950 mb-2">
-                JAWABAN SALAH / KURANG TEPAT ❌
-              </h3>
-
-              <div className="my-3 flex flex-wrap items-center justify-center gap-2">
-                <span className="font-display font-black text-sm sm:text-base bg-white border-2 border-slate-900 px-3 py-1 rounded-block shadow-block-xs text-slate-700">
-                  +0 Poin
-                </span>
-                <span className="font-display font-bold text-xs bg-white/80 border border-slate-900 px-2.5 py-1 rounded-block text-slate-600">
-                  Streak beruntun ter-reset ke 0
-                </span>
-              </div>
-
-              <div className="p-3 bg-white/90 border-2 border-slate-900 rounded-block text-left text-xs text-slate-800 mb-4 shadow-block-xs">
-                <span className="font-bold text-slate-600 block mb-0.5">Jawaban yang kamu kirim:</span>
-                <span className="font-display font-bold text-sm text-rose-950 break-words">
-                  "{answerFeedback.selectedText}"
-                </span>
-              </div>
-
-              <p className="text-xs font-semibold text-rose-950">
-                Jangan menyerah! Masih ada kesempatan di soal berikutnya.
-              </p>
-
-              <div className="mt-4 pt-3 border-t-2 border-slate-900/20 flex items-center justify-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce" />
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce delay-100" />
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce delay-200" />
-              </div>
-            </Card>
-          )}
+            <div className="mt-6 pt-4 border-t-2 border-slate-900/15 flex items-center justify-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce" />
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce delay-100" />
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-bounce delay-200" />
+            </div>
+          </Card>
         </div>
       )}
 
@@ -409,9 +341,43 @@ export const StudentPlayPage = () => {
         </div>
       )}
 
-      {/* STATE 5: RESULT / FEEDBACK */}
+      {/* STATE 5: RESULT / FEEDBACK (HASIL JAWABAN TERBUKA SERENTAK) */}
       {gameState === 'result' && (
-        <div className="my-auto animate-in fade-in zoom-in-95 py-6">
+        <div className="my-auto animate-in fade-in zoom-in-95 py-4 space-y-4 max-w-md mx-auto w-full">
+          {answerFeedback?.correct ? (
+            <Card className="bg-emerald-400 border-3 border-slate-900 shadow-block-lg p-5 sm:p-6 text-center">
+              <div className="w-14 h-14 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-emerald-600 mb-2 shadow-block-sm">
+                <Check className="w-9 h-9 stroke-[3.5]" />
+              </div>
+              <h3 className="font-display font-black text-2xl text-slate-950">
+                JAWABAN KAMU BENAR! 🎉
+              </h3>
+              <div className="mt-2.5 flex items-center justify-center gap-2">
+                <span className="font-display font-black text-base bg-white border-2 border-slate-900 px-3 py-0.5 rounded shadow-block-xs text-emerald-800">
+                  +{answerFeedback.points} Poin
+                </span>
+                {answerFeedback.streak > 1 && (
+                  <span className="font-display font-black text-xs bg-rose-100 border-2 border-slate-900 px-2.5 py-0.5 rounded text-rose-800 flex items-center gap-1">
+                    <Flame className="w-3.5 h-3.5 fill-rose-500 text-rose-600" />
+                    {answerFeedback.streak}x Beruntun
+                  </span>
+                )}
+              </div>
+            </Card>
+          ) : (
+            <Card className="bg-rose-200 border-3 border-slate-900 shadow-block-lg p-5 sm:p-6 text-center">
+              <div className="w-14 h-14 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-rose-600 mb-2 shadow-block-sm">
+                <X className="w-9 h-9 stroke-[3.5]" />
+              </div>
+              <h3 className="font-display font-black text-2xl text-rose-950">
+                JAWABAN KURANG TEPAT ❌
+              </h3>
+              <p className="text-xs font-bold text-rose-950 mt-1">
+                +0 Poin &bull; Streak beruntun kembali ke 0
+              </p>
+            </Card>
+          )}
+
           <ScoreCard
             isCorrect={answerFeedback?.correct}
             pointsEarned={answerFeedback?.points || 0}
@@ -420,8 +386,9 @@ export const StudentPlayPage = () => {
             streak={playerStats.streak}
             nickname={playerSession?.nickname}
           />
-          <p className="text-center text-xs font-bold text-slate-500 mt-4">
-            Menunggu guru membuka soal berikutnya...
+
+          <p className="text-center text-xs font-bold text-slate-500">
+            Guru sedang menampilkan pembahasan & klasemen sementara...
           </p>
         </div>
       )}

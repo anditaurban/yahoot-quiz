@@ -437,6 +437,13 @@ async function handleGameApi(request, url) {
       player.streak = isCorrect ? (player.streak || 0) + 1 : 0;
     }
 
+    // Competitive mode: auto-reveal when ALL registered players have submitted
+    const totalAnswered = Object.keys(game.answers[qIdx] || {}).length;
+    const totalPlayers = (game.players || []).length;
+    if (totalPlayers > 0 && totalAnswered >= totalPlayers) {
+      game.status = 'feedback';
+    }
+
     await persistGameSession(game);
 
     return jsonResponse({
