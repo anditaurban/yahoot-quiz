@@ -107,9 +107,14 @@ export const lmsClient = {
 export const apiClient = {
   async get(endpoint) {
     try {
-      const url = `/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+      const sep = endpoint.includes('?') ? '&' : '?';
+      const url = `/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}${sep}_t=${Date.now()}`;
       const res = await fetch(url, {
-        headers: { 'Accept': 'application/json' },
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data) {

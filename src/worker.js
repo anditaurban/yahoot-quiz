@@ -65,16 +65,23 @@ async function saveCentralGames(gamesObj) {
   }
 }
 
-// Lookup game from memory, or fallback to centralized Katib database
+const CORS_HEADERS = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+  'Pragma': 'no-cache',
+  'Expires': '0',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Always fetch freshest state from centralized storage so every isolate and device
+// sees newly joined players and status changes immediately without reload
 async function getGameSession(codeOrId) {
   const clean = String(codeOrId || '').trim();
   if (!clean) return null;
 
-  // 1. Check local isolate memory
-  let game = gamesByCode.get(clean) || games.get(clean);
-  if (game) return game;
-
-  // 2. Fetch from centralized storage
+  // Always refresh from central Katib store
   const central = await fetchCentralGames();
   for (const [id, g] of Object.entries(central)) {
     games.set(id, g);
@@ -113,13 +120,6 @@ async function generateUniquePin() {
   }
   return String(Math.floor(10000 + Math.random() * 90000));
 }
-
-const CORS_HEADERS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {

@@ -26,22 +26,21 @@ export const TeacherGameLobbyPage = () => {
     const fetchLobby = async () => {
       try {
         const gameData = await getGameById(id);
-        if (!isMounted) return;
-        if (!gameData) {
-          setError('Sesi game tidak ditemukan.');
-          return;
-        }
-        setGame({ ...gameData });
+        if (!isMounted || !gameData) return;
+        setGame(prev => ({ ...(prev || {}), ...gameData }));
       } catch (err) {
         if (!isMounted) return;
-        setError(err.message || 'Gagal memuat lobi game.');
+        // Don't overwrite existing game data on transient polling hiccups
+        if (!game) {
+          setError(err.message || 'Gagal memuat lobi game.');
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
     fetchLobby();
-    const interval = setInterval(fetchLobby, 1500);
+    const interval = setInterval(fetchLobby, 1000);
 
     return () => {
       isMounted = false;

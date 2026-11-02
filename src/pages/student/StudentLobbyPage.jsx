@@ -42,8 +42,8 @@ export const StudentLobbyPage = () => {
     const fetchGame = async () => {
       try {
         const data = await getGame(code);
-        if (!isMounted) return;
-        setGame(data);
+        if (!isMounted || !data) return;
+        setGame(prev => ({ ...(prev || {}), ...data }));
         setError('');
 
         // If host has already started question, immediately transition
@@ -52,15 +52,17 @@ export const StudentLobbyPage = () => {
         }
       } catch (err) {
         if (!isMounted) return;
-        setError(err.message || 'Gagal memuat sesi kuis.');
+        if (!game) {
+          setError(err.message || 'Gagal memuat sesi kuis.');
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
     fetchGame();
-    // Poll every 1.5 seconds for game start
-    const interval = setInterval(fetchGame, 1500);
+    // Poll every 1 second for game start
+    const interval = setInterval(fetchGame, 1000);
 
     return () => {
       isMounted = false;
