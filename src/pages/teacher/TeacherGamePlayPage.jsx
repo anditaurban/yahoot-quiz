@@ -85,11 +85,12 @@ export const TeacherGamePlayPage = () => {
   const [isPlayingSound, setIsPlayingSound] = useState(true);
   const audioRef = useRef(null);
   const fanfareRef = useRef(null);
+  const leaderboardAudioRef = useRef(null);
   const isPlayingSoundRef = useRef(true);
   const currentQuestionIdRef = useRef(null);
   const roundPhaseRef = useRef('question');
 
-  // Background Music (SpongeBob Closing Theme) during Question Answering
+  // Background Music & Sound Effects for Quiz Stages
   useEffect(() => {
     const audio = new Audio('/audio/spongebob-theme.mp3');
     audio.loop = true;
@@ -99,6 +100,10 @@ export const TeacherGamePlayPage = () => {
     const fanfare = new Audio('/audio/reveal-fanfare.wav');
     fanfare.volume = 0.6;
     fanfareRef.current = fanfare;
+
+    const lbAudio = new Audio('/audio/leaderboard-jingle.wav');
+    lbAudio.volume = 0.65;
+    leaderboardAudioRef.current = lbAudio;
 
     const startAudio = () => {
       audio
@@ -126,14 +131,27 @@ export const TeacherGamePlayPage = () => {
       audio.currentTime = 0;
       fanfare.pause();
       fanfare.currentTime = 0;
+      lbAudio.pause();
+      lbAudio.currentTime = 0;
     };
   }, []);
 
   const playFanfare = () => {
     try {
-      if (fanfareRef.current) {
+      if (fanfareRef.current && isPlayingSoundRef.current) {
         fanfareRef.current.currentTime = 0;
         fanfareRef.current.play().catch(() => {});
+      }
+    } catch {
+      // Audio autoplay restrictions
+    }
+  };
+
+  const playLeaderboardSound = () => {
+    try {
+      if (leaderboardAudioRef.current && isPlayingSoundRef.current) {
+        leaderboardAudioRef.current.currentTime = 0;
+        leaderboardAudioRef.current.play().catch(() => {});
       }
     } catch {
       // Audio autoplay restrictions
@@ -144,16 +162,18 @@ export const TeacherGamePlayPage = () => {
     if (!audioRef.current) return;
     if (isPlayingSound) {
       audioRef.current.pause();
+      if (fanfareRef.current) fanfareRef.current.pause();
+      if (leaderboardAudioRef.current) leaderboardAudioRef.current.pause();
       setIsPlayingSound(false);
       isPlayingSoundRef.current = false;
     } else {
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlayingSound(true);
-          isPlayingSoundRef.current = true;
-        })
-        .catch(() => {});
+      setIsPlayingSound(true);
+      isPlayingSoundRef.current = true;
+      if (roundPhaseRef.current === 'question') {
+        audioRef.current.play().catch(() => {});
+      } else if (roundPhaseRef.current === 'leaderboard' && leaderboardAudioRef.current) {
+        leaderboardAudioRef.current.play().catch(() => {});
+      }
     }
   };
 
@@ -258,6 +278,15 @@ export const TeacherGamePlayPage = () => {
   const transitionToLeaderboard = () => {
     roundPhaseRef.current = 'leaderboard';
     setRoundPhase('leaderboard');
+
+    // Stop reveal fanfare if still playing
+    if (fanfareRef.current) {
+      fanfareRef.current.pause();
+      fanfareRef.current.currentTime = 0;
+    }
+
+    // Play distinct Leaderboard Drumroll + Fanfare Jingle!
+    playLeaderboardSound();
   };
 
   // Transition Step 3 -> Step 4: KLASEMEN SEMENTARA -> SOAL BERIKUTNYA
@@ -271,11 +300,17 @@ export const TeacherGamePlayPage = () => {
       setRoundPhase('question');
       setTimerRunning(true);
 
-      // Stop any lingering fanfare and START SPONGEBOB AGAIN from the beginning!
+      // Stop any lingering leaderboard / fanfare sounds
       if (fanfareRef.current) {
         fanfareRef.current.pause();
         fanfareRef.current.currentTime = 0;
       }
+      if (leaderboardAudioRef.current) {
+        leaderboardAudioRef.current.pause();
+        leaderboardAudioRef.current.currentTime = 0;
+      }
+
+      // START SPONGEBOB AGAIN from the beginning for the new question!
       if (audioRef.current && isPlayingSoundRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
@@ -284,6 +319,9 @@ export const TeacherGamePlayPage = () => {
       if (res?.status === 'finished') {
         if (audioRef.current) {
           audioRef.current.pause();
+        }
+        if (leaderboardAudioRef.current) {
+          leaderboardAudioRef.current.pause();
         }
         navigate(`/teacher/games/${id}/result`);
       }
