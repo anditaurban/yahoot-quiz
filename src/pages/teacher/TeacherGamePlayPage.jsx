@@ -90,6 +90,7 @@ export const TeacherGamePlayPage = () => {
   const currentQuestionIdRef = useRef(null);
   const currentQuestionIndexRef = useRef(-1);
   const roundPhaseRef = useRef('question');
+  const justAdvancedRef = useRef(false);
 
   // Background Music & Sound Effects for Quiz Stages
   useEffect(() => {
@@ -239,10 +240,11 @@ export const TeacherGamePlayPage = () => {
           setLeaderboard(res.players);
         }
 
-        // Competitive flow: Auto-transition to 'reveal' when all players have answered
+        // Competitive flow: Auto-transition to 'reveal' ONLY when all players have submitted answers for THIS question
         const totalP = (gameData.players && gameData.players.length > 0) ? gameData.players.length : 0;
         const totalAns = stats?.totalAnswers || 0;
-        if (roundPhaseRef.current === 'question' && totalP > 0 && totalAns >= totalP) {
+        const isCurrentQuestion = qData.index === currentQuestionIndexRef.current;
+        if (!justAdvancedRef.current && roundPhaseRef.current === 'question' && isCurrentQuestion && totalP > 0 && totalAns > 0 && totalAns >= totalP) {
           transitionToReveal();
         }
       } catch (err) {
@@ -352,6 +354,12 @@ export const TeacherGamePlayPage = () => {
       } else if (res?.questionIndex !== undefined) {
         currentQuestionIndexRef.current = res.questionIndex;
       }
+
+      // Set advance guard cooldown to prevent stale poll race condition
+      justAdvancedRef.current = true;
+      setTimeout(() => {
+        justAdvancedRef.current = false;
+      }, 2500);
 
       setAnswerStats({ totalAnswers: 0, optionCounts: {} });
       roundPhaseRef.current = 'question';

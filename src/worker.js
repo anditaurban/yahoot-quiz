@@ -85,7 +85,13 @@ async function getGameSession(codeOrId) {
   const central = await fetchCentralGames();
   for (const [id, g] of Object.entries(central)) {
     const local = games.get(id);
-    if (!local || !local.updatedAt || !g.updatedAt || g.updatedAt >= local.updatedAt) {
+    const shouldUpdate =
+      !local ||
+      (local.updatedAt && g.updatedAt
+        ? g.updatedAt >= local.updatedAt
+        : !local.updatedAt);
+
+    if (shouldUpdate) {
       games.set(id, g);
       if (g.code) {
         gamesByCode.set(String(g.code).trim(), g);
@@ -460,7 +466,7 @@ async function handleGameApi(request, url) {
     // Competitive mode: auto-reveal when ALL registered players have submitted
     const totalAnswered = Object.keys(game.answers[qIdx] || {}).length;
     const totalPlayers = (game.players || []).length;
-    if (totalPlayers > 0 && totalAnswered >= totalPlayers) {
+    if (totalPlayers > 0 && totalAnswered > 0 && totalAnswered >= totalPlayers && qIdx === game.currentQuestionIndex) {
       game.status = 'feedback';
     }
 

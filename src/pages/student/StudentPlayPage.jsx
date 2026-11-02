@@ -87,10 +87,20 @@ export const StudentPlayPage = () => {
           setSelectedOptionId(null);
           setTypedAnswer('');
           setAnswerFeedback(null);
-          setGameState('answering');
+          if (qData.gameStatus === 'feedback') {
+            setGameState('result');
+          } else {
+            setGameState('answering');
+          }
         } else if (qData.gameStatus === 'feedback') {
           // If teacher opened feedback / results for this question
           setGameState('result');
+        } else if (qData.gameStatus === 'question' && (gameState === 'result' || gameState === 'time-expired')) {
+          // If server is actively on a question but student was stuck on result/time-expired, recover immediately!
+          setSelectedOptionId(null);
+          setTypedAnswer('');
+          setAnswerFeedback(null);
+          setGameState('answering');
         }
 
         // Update player score from results endpoint
@@ -371,7 +381,7 @@ export const StudentPlayPage = () => {
                 )}
               </div>
             </Card>
-          ) : (
+          ) : answerFeedback ? (
             <Card className="bg-rose-200 border-3 border-slate-900 shadow-block-lg p-5 sm:p-6 text-center">
               <div className="w-14 h-14 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-rose-600 mb-2 shadow-block-sm">
                 <X className="w-9 h-9 stroke-[3.5]" />
@@ -381,6 +391,18 @@ export const StudentPlayPage = () => {
               </h3>
               <p className="text-xs font-bold text-rose-950 mt-1">
                 +0 Poin &bull; Streak beruntun kembali ke 0
+              </p>
+            </Card>
+          ) : (
+            <Card className="bg-amber-100 border-3 border-slate-900 shadow-block-lg p-5 sm:p-6 text-center">
+              <div className="w-14 h-14 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-amber-600 mb-2 shadow-block-sm">
+                <Clock className="w-8 h-8 stroke-[2.5]" />
+              </div>
+              <h3 className="font-display font-black text-2xl text-slate-950">
+                BELUM SEMPAT MENJAWAB ⏱️
+              </h3>
+              <p className="text-xs font-bold text-slate-700 mt-1">
+                Kamu belum sempat memilih jawaban pada soal ini.
               </p>
             </Card>
           )}

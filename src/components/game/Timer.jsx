@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Clock } from 'lucide-react';
 
 export const Timer = ({
@@ -9,15 +9,20 @@ export const Timer = ({
   className = '',
 }) => {
   const [timeLeft, setTimeLeft] = useState(duration);
+  const onTimeUpCalledRef = useRef(false);
 
   useEffect(() => {
     setTimeLeft(duration);
+    onTimeUpCalledRef.current = false;
   }, [duration]);
 
   useEffect(() => {
-    if (!isRunning || timeLeft <= 0) {
-      if (timeLeft === 0 && onTimeUp) {
-        onTimeUp();
+    if (!isRunning) return;
+
+    if (timeLeft <= 0) {
+      if (!onTimeUpCalledRef.current) {
+        onTimeUpCalledRef.current = true;
+        if (onTimeUp) onTimeUp();
       }
       return;
     }
@@ -26,7 +31,10 @@ export const Timer = ({
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          if (onTimeUp) onTimeUp();
+          if (!onTimeUpCalledRef.current) {
+            onTimeUpCalledRef.current = true;
+            if (onTimeUp) onTimeUp();
+          }
           return 0;
         }
         return prev - 1;
