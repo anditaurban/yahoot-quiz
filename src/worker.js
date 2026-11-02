@@ -337,6 +337,16 @@ async function handleGameApi(request, url) {
     }
 
     const currentQ = game.questions[qIndex];
+    if (!currentQ) {
+      return jsonResponse({
+        data: {
+          finished: true,
+          status: 'finished',
+          message: 'Semua pertanyaan telah selesai.',
+        },
+      });
+    }
+
     const timeLimit = Number(currentQ.timeLimit) || 20;
 
     const responseData = {

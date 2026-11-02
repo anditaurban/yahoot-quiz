@@ -85,6 +85,9 @@ export const TeacherGamePlayPage = () => {
   const [isPlayingSound, setIsPlayingSound] = useState(true);
   const audioRef = useRef(null);
   const fanfareRef = useRef(null);
+  const isPlayingSoundRef = useRef(true);
+  const currentQuestionIdRef = useRef(null);
+  const roundPhaseRef = useRef('question');
 
   // Background Music (SpongeBob Closing Theme) during Question Answering
   useEffect(() => {
@@ -100,10 +103,16 @@ export const TeacherGamePlayPage = () => {
     const startAudio = () => {
       audio
         .play()
-        .then(() => setIsPlayingSound(true))
+        .then(() => {
+          setIsPlayingSound(true);
+          isPlayingSoundRef.current = true;
+        })
         .catch(() => {
           const onFirstClick = () => {
-            audio.play().then(() => setIsPlayingSound(true)).catch(() => {});
+            audio.play().then(() => {
+              setIsPlayingSound(true);
+              isPlayingSoundRef.current = true;
+            }).catch(() => {});
             window.removeEventListener('click', onFirstClick);
           };
           window.addEventListener('click', onFirstClick, { once: true });
@@ -136,10 +145,14 @@ export const TeacherGamePlayPage = () => {
     if (isPlayingSound) {
       audioRef.current.pause();
       setIsPlayingSound(false);
+      isPlayingSoundRef.current = false;
     } else {
       audioRef.current
         .play()
-        .then(() => setIsPlayingSound(true))
+        .then(() => {
+          setIsPlayingSound(true);
+          isPlayingSoundRef.current = true;
+        })
         .catch(() => {});
     }
   };
@@ -172,25 +185,29 @@ export const TeacherGamePlayPage = () => {
         }
 
         // Detect if question advanced to a new one
-        if (question && qData.id !== question.id) {
+        if (qData.id !== currentQuestionIdRef.current) {
+          currentQuestionIdRef.current = qData.id;
           setQuestion(qData);
+          roundPhaseRef.current = 'question';
           setRoundPhase('question');
           setTimerRunning(true);
           // Restart SpongeBob sound for new question
-          if (audioRef.current && isPlayingSound) {
+          if (audioRef.current && isPlayingSoundRef.current) {
             audioRef.current.currentTime = 0;
             audioRef.current.play().catch(() => {});
           }
         } else {
-          setQuestion(qData);
+          setQuestion((prev) => (prev ? { ...prev, ...qData } : qData));
         }
 
         // Fetch answer statistics for this question
         const stats = await getAnswersStats(id, qData.index);
+        if (!isMounted) return;
         setAnswerStats(stats || { totalAnswers: 0, optionCounts: {} });
 
         // Fetch current leaderboard (all players)
         const res = await getResults(id);
+        if (!isMounted) return;
         if (res?.players) {
           setLeaderboard(res.players);
         }
@@ -198,7 +215,7 @@ export const TeacherGamePlayPage = () => {
         // Competitive flow: Auto-transition to 'reveal' when all players have answered
         const totalP = (gameData.players && gameData.players.length > 0) ? gameData.players.length : 0;
         const totalAns = stats?.totalAnswers || 0;
-        if (roundPhase === 'question' && totalP > 0 && totalAns >= totalP) {
+        if (roundPhaseRef.current === 'question' && totalP > 0 && totalAns >= totalP) {
           transitionToReveal();
         }
       } catch (err) {
@@ -216,10 +233,11 @@ export const TeacherGamePlayPage = () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [id, question, roundPhase, isPlayingSound, navigate]);
+  }, [id, navigate]);
 
   // Transition Step 1 -> Step 2: SOAL -> JAWABAN BENAR (Reveal)
   const transitionToReveal = async () => {
+    roundPhaseRef.current = 'reveal';
     setRoundPhase('reveal');
     setTimerRunning(false);
 
@@ -238,6 +256,7 @@ export const TeacherGamePlayPage = () => {
 
   // Transition Step 2 -> Step 3: JAWABAN BENAR -> KLASEMEN SEMENTARA
   const transitionToLeaderboard = () => {
+    roundPhaseRef.current = 'leaderboard';
     setRoundPhase('leaderboard');
   };
 
@@ -248,6 +267,7 @@ export const TeacherGamePlayPage = () => {
     setShowAllLeaderboard(false);
     try {
       const res = await nextQuestion(id);
+      roundPhaseRef.current = 'question';
       setRoundPhase('question');
       setTimerRunning(true);
 
@@ -256,7 +276,7 @@ export const TeacherGamePlayPage = () => {
         fanfareRef.current.pause();
         fanfareRef.current.currentTime = 0;
       }
-      if (audioRef.current && isPlayingSound) {
+      if (audioRef.current && isPlayingSoundRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
       }
@@ -274,7 +294,7 @@ export const TeacherGamePlayPage = () => {
     }
   };
 
-  if (loading || !question) {
+  if (loading && !question) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
         <div className="text-center">
