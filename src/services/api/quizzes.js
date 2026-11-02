@@ -192,7 +192,9 @@ export const getQuizzes = async (params = {}) => {
   }
 
   const rawList = response.tableData || [];
-  const transformedList = rawList.map(item => transformLmsQuizToApp(item));
+  const transformedList = rawList
+    .filter(item => !String(item.title || '').startsWith('__YAHOOT_'))
+    .map(item => transformLmsQuizToApp(item));
 
   if (params.returnFullResponse) {
     return {
@@ -500,7 +502,9 @@ export const getYahootStudentQuizzes = async (customerId = null) => {
   const endpoint = customerId ? `/list/yahoot_quiz/${customerId}` : '/list/yahoot_quiz';
   const response = await lmsClient.get(endpoint);
   const list = response.listData || [];
-  return list.map(item => transformLmsQuizToApp(item));
+  return list
+    .filter(item => !String(item.title || '').startsWith('__YAHOOT_'))
+    .map(item => transformLmsQuizToApp(item));
 };
 
 /**

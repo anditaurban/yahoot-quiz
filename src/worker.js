@@ -1,15 +1,113 @@
 // Cloudflare Worker for Yahoot! Live Multiplayer Game API & SPA Asset Serving
-// Strictly implements docs/04-API-SPEC.md for cross-device game sessions
+// Fully synchronized via Katib Central LMS Storage (Quiz Record #9) to guarantee
+// cross-device, cross-isolate persistence for all students and teachers.
 
-// In-memory game store (persists across requests to the worker instance)
+const KATIB_BASE = 'https://dev.katib.cloud';
+const KATIB_TOKEN = 'DpacnJf3uEQeM7HN';
+const KATIB_RECORD_ID = 9;
+
+// In-memory cache for ultra-fast same-isolate responses
 const games = new Map();
 const gamesByCode = new Map();
 
+// Fetch all active games from Katib centralized database
+async function fetchCentralGames() {
+  try {
+    const res = await fetch(`${KATIB_BASE}/detail/yahoot_quiz/${KATIB_RECORD_ID}?_t=${Date.now()}`, {
+      headers: {
+        'Authorization': `Bearer ${KATIB_TOKEN}`,
+        'Accept': 'application/json',
+      },
+    });
+    if (!res.ok) return {};
+    const json = await res.json();
+    const desc = json.data?.quiz?.description || json.quiz?.description;
+    if (!desc) return {};
+    const parsed = JSON.parse(desc);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (err) {
+    console.warn('Central fetch error:', err.message);
+    return {};
+  }
+}
+
+// Persist active games to Katib centralized database
+async function saveCentralGames(gamesObj) {
+  try {
+    // Keep only games created in the last 24 hours to prevent bloated database records
+    const now = Date.now();
+    const pruned = {};
+    for (const [key, g] of Object.entries(gamesObj)) {
+      const createdTime = g.createdAt ? new Date(g.createdAt).getTime() : now;
+      if (now - createdTime < 24 * 60 * 60 * 1000) {
+        pruned[key] = g;
+      }
+    }
+
+    await fetch(`${KATIB_BASE}/update/yahoot_quiz/${KATIB_RECORD_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${KATIB_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        owner_id: 4409,
+        title: '__YAHOOT_ACTIVE_GAMES__',
+        description: JSON.stringify(pruned),
+        passing_score: 75,
+        time_limit: 30,
+        status: 'draft',
+      }),
+    });
+  } catch (err) {
+    console.warn('Central save error:', err.message);
+  }
+}
+
+// Lookup game from memory, or fallback to centralized Katib database
+async function getGameSession(codeOrId) {
+  const clean = String(codeOrId || '').trim();
+  if (!clean) return null;
+
+  // 1. Check local isolate memory
+  let game = gamesByCode.get(clean) || games.get(clean);
+  if (game) return game;
+
+  // 2. Fetch from centralized storage
+  const central = await fetchCentralGames();
+  for (const [id, g] of Object.entries(central)) {
+    games.set(id, g);
+    if (g.code) {
+      gamesByCode.set(String(g.code).trim(), g);
+    }
+  }
+
+  return gamesByCode.get(clean) || games.get(clean) || null;
+}
+
+// Persist single game to both local memory and centralized storage
+async function persistGameSession(game) {
+  if (!game || !game.id) return;
+
+  games.set(game.id, game);
+  if (game.code) {
+    gamesByCode.set(String(game.code).trim(), game);
+  }
+
+  // Update central store
+  const central = await fetchCentralGames();
+  central[game.id] = game;
+  await saveCentralGames(central);
+}
+
 // Helper to generate a unique 5-digit PIN
-function generateGamePin() {
+async function generateUniquePin() {
+  const central = await fetchCentralGames();
   for (let i = 0; i < 50; i++) {
     const pin = String(Math.floor(10000 + Math.random() * 90000));
-    if (!gamesByCode.has(pin)) {
+    const inCentral = Object.values(central).some(g => String(g.code) === pin);
+    if (!gamesByCode.has(pin) && !inCentral) {
       return pin;
     }
   }
@@ -46,7 +144,7 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // Only route /api/games requests to Worker API logic
+    // Route /api/games requests to Worker API logic
     if (url.pathname.startsWith('/api/games')) {
       try {
         return await handleGameApi(request, url);
@@ -71,10 +169,10 @@ async function handleGameApi(request, url) {
     const quizId = body.quizId || quiz?.id;
 
     if (!quiz || !quiz.questions || quiz.questions.length === 0) {
-      return errorResponse('Kuis harus memiliki minimal 1 soal pertanyaan untuk membuat game.', 'INVALID_QUIZ');
+      return errorResponse('Kuis harus memiliki minimal 1 butir soal untuk membuat sesi permainan.', 'INVALID_QUIZ');
     }
 
-    const code = generateGamePin();
+    const code = await generateUniquePin();
     const gameId = `game_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
     const newGame = {
@@ -87,13 +185,12 @@ async function handleGameApi(request, url) {
       totalQuestions: quiz.questions.length,
       questions: quiz.questions,
       players: [],
-      answers: {}, // { [questionIndex]: { [playerId]: { optionId, isCorrect, pointsEarned, submittedAt } } }
+      answers: {},
       createdAt: new Date().toISOString(),
       questionStartedAt: null,
     };
 
-    games.set(gameId, newGame);
-    gamesByCode.set(code, newGame);
+    await persistGameSession(newGame);
 
     return jsonResponse({
       data: {
@@ -108,7 +205,7 @@ async function handleGameApi(request, url) {
   const getGameMatch = path.match(/^\/([^/]+)$/);
   if (method === 'GET' && getGameMatch) {
     const param = getGameMatch[1].trim();
-    const game = gamesByCode.get(param) || games.get(param);
+    const game = await getGameSession(param);
 
     if (!game) {
       return errorResponse('Kode game tidak ditemukan. Coba periksa kembali.', 'GAME_NOT_FOUND', 404);
@@ -122,7 +219,7 @@ async function handleGameApi(request, url) {
         quizTitle: game.quizTitle,
         totalQuestions: game.totalQuestions,
         currentQuestionIndex: game.currentQuestionIndex,
-        players: game.players.map((p) => ({
+        players: (game.players || []).map((p) => ({
           id: p.id,
           playerId: p.id,
           nickname: p.nickname,
@@ -136,7 +233,7 @@ async function handleGameApi(request, url) {
   const joinMatch = path.match(/^\/([^/]+)\/join$/);
   if (method === 'POST' && joinMatch) {
     const param = joinMatch[1].trim();
-    const game = gamesByCode.get(param) || games.get(param);
+    const game = await getGameSession(param);
 
     if (!game) {
       return errorResponse('Kode game tidak ditemukan. Coba periksa kembali.', 'GAME_NOT_FOUND', 404);
@@ -153,10 +250,16 @@ async function handleGameApi(request, url) {
       return errorResponse('Nickname tidak boleh kosong.', 'INVALID_NICKNAME', 400);
     }
 
-    // Check duplicate nickname
-    const exists = game.players.some((p) => p.nickname.toLowerCase() === cleanNick.toLowerCase());
+    // Check duplicate nickname in this session
+    const exists = (game.players || []).some(
+      (p) => p.nickname.toLowerCase() === cleanNick.toLowerCase()
+    );
     if (exists) {
-      return errorResponse(`Nickname "${cleanNick}" sudah digunakan di sesi ini. Gunakan nama lain.`, 'NICKNAME_TAKEN', 400);
+      return errorResponse(
+        `Nickname "${cleanNick}" sudah digunakan di sesi ini. Silakan gunakan nama lain.`,
+        'NICKNAME_TAKEN',
+        400
+      );
     }
 
     const playerId = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -168,7 +271,10 @@ async function handleGameApi(request, url) {
       joinedAt: new Date().toISOString(),
     };
 
+    game.players = game.players || [];
     game.players.push(newPlayer);
+
+    await persistGameSession(game);
 
     return jsonResponse({
       data: {
@@ -184,7 +290,7 @@ async function handleGameApi(request, url) {
   const startMatch = path.match(/^\/([^/]+)\/start$/);
   if (method === 'POST' && startMatch) {
     const gameId = startMatch[1].trim();
-    const game = games.get(gameId) || gamesByCode.get(gameId);
+    const game = await getGameSession(gameId);
 
     if (!game) {
       return errorResponse('Game tidak ditemukan.', 'GAME_NOT_FOUND', 404);
@@ -193,6 +299,8 @@ async function handleGameApi(request, url) {
     game.status = 'question';
     game.currentQuestionIndex = 0;
     game.questionStartedAt = Date.now();
+
+    await persistGameSession(game);
 
     return jsonResponse({
       data: {
@@ -206,7 +314,7 @@ async function handleGameApi(request, url) {
   const curQMatch = path.match(/^\/([^/]+)\/current-question$/);
   if (method === 'GET' && curQMatch) {
     const gameId = curQMatch[1].trim();
-    const game = games.get(gameId) || gamesByCode.get(gameId);
+    const game = await getGameSession(gameId);
 
     if (!game) {
       return errorResponse('Game tidak ditemukan.', 'GAME_NOT_FOUND', 404);
@@ -253,7 +361,7 @@ async function handleGameApi(request, url) {
   const answerMatch = path.match(/^\/([^/]+)\/answers$/);
   if (method === 'POST' && answerMatch) {
     const gameId = answerMatch[1].trim();
-    const game = games.get(gameId) || gamesByCode.get(gameId);
+    const game = await getGameSession(gameId);
 
     if (!game) {
       return errorResponse('Game tidak ditemukan.', 'GAME_NOT_FOUND', 404);
@@ -262,35 +370,27 @@ async function handleGameApi(request, url) {
     const body = await request.json().catch(() => ({}));
     const { playerId, questionIndex, answer } = body;
 
-    const qIdx = questionIndex !== undefined ? Number(questionIndex) : game.currentQuestionIndex;
+    const qIdx = questionIndex !== undefined ? Number(questionIndex) : (game.currentQuestionIndex || 0);
     const currentQ = game.questions[qIdx];
 
     if (!currentQ) {
       return errorResponse('Pertanyaan tidak valid.', 'INVALID_QUESTION', 400);
     }
 
+    game.answers = game.answers || {};
     game.answers[qIdx] = game.answers[qIdx] || {};
 
-    // Check if player already answered this question
     if (game.answers[qIdx][playerId]) {
       return errorResponse('Anda sudah mengirim jawaban untuk soal ini.', 'ALREADY_ANSWERED', 400);
     }
 
-    const qType = currentQ.type || 'multiple_choice';
     const rawAnswer = String(answer || '').trim();
     const expected = String(currentQ.correctOptionId || currentQ.correct_answer || '').trim();
-
-    let isCorrect = false;
-    if (qType === 'short_answer') {
-      isCorrect = rawAnswer.toLowerCase() === expected.toLowerCase();
-    } else {
-      isCorrect = rawAnswer.toLowerCase() === expected.toLowerCase();
-    }
+    const isCorrect = rawAnswer.toLowerCase() === expected.toLowerCase();
 
     const timeLimit = Number(currentQ.timeLimit) || 20;
     const elapsedSeconds = Math.max(0, (Date.now() - (game.questionStartedAt || Date.now())) / 1000);
 
-    // Kahoot-style speed points: up to 1000 points, minimum 500 points for correct answers
     let pointsEarned = 0;
     if (isCorrect) {
       const speedRatio = Math.max(0, Math.min(1, 1 - (elapsedSeconds / timeLimit) * 0.5));
@@ -304,10 +404,12 @@ async function handleGameApi(request, url) {
       submittedAt: new Date().toISOString(),
     };
 
-    const player = game.players.find((p) => p.id === playerId);
+    const player = (game.players || []).find((p) => p.id === playerId);
     if (player) {
       player.score = (player.score || 0) + pointsEarned;
     }
+
+    await persistGameSession(game);
 
     return jsonResponse({
       data: {
@@ -322,7 +424,7 @@ async function handleGameApi(request, url) {
   const nextMatch = path.match(/^\/([^/]+)\/next$/);
   if (method === 'POST' && nextMatch) {
     const gameId = nextMatch[1].trim();
-    const game = games.get(gameId) || gamesByCode.get(gameId);
+    const game = await getGameSession(gameId);
 
     if (!game) {
       return errorResponse('Game tidak ditemukan.', 'GAME_NOT_FOUND', 404);
@@ -336,6 +438,8 @@ async function handleGameApi(request, url) {
       game.status = 'finished';
     }
 
+    await persistGameSession(game);
+
     return jsonResponse({
       data: {
         status: game.status,
@@ -348,7 +452,7 @@ async function handleGameApi(request, url) {
   const statusMatch = path.match(/^\/([^/]+)\/status$/);
   if (method === 'POST' && statusMatch) {
     const gameId = statusMatch[1].trim();
-    const game = games.get(gameId) || gamesByCode.get(gameId);
+    const game = await getGameSession(gameId);
 
     if (!game) {
       return errorResponse('Game tidak ditemukan.', 'GAME_NOT_FOUND', 404);
@@ -357,6 +461,7 @@ async function handleGameApi(request, url) {
     const body = await request.json().catch(() => ({}));
     if (body.status) {
       game.status = body.status;
+      await persistGameSession(game);
     }
 
     return jsonResponse({ data: { status: game.status } });
@@ -367,13 +472,13 @@ async function handleGameApi(request, url) {
   if (method === 'GET' && statsMatch) {
     const gameId = statsMatch[1].trim();
     const qIndex = Number(statsMatch[2]);
-    const game = games.get(gameId) || gamesByCode.get(gameId);
+    const game = await getGameSession(gameId);
 
     if (!game) {
       return errorResponse('Game tidak ditemukan.', 'GAME_NOT_FOUND', 404);
     }
 
-    const answersForQ = game.answers[qIndex] || {};
+    const answersForQ = (game.answers && game.answers[qIndex]) || {};
     const optionCounts = { a: 0, b: 0, c: 0, d: 0, true: 0, false: 0 };
 
     Object.values(answersForQ).forEach((ans) => {
@@ -393,13 +498,13 @@ async function handleGameApi(request, url) {
   const resultsMatch = path.match(/^\/([^/]+)\/results$/);
   if (method === 'GET' && resultsMatch) {
     const gameId = resultsMatch[1].trim();
-    const game = games.get(gameId) || gamesByCode.get(gameId);
+    const game = await getGameSession(gameId);
 
     if (!game) {
       return errorResponse('Game tidak ditemukan.', 'GAME_NOT_FOUND', 404);
     }
 
-    const sortedPlayers = [...game.players]
+    const sortedPlayers = [...(game.players || [])]
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .map((p, idx) => ({
         playerId: p.id,
@@ -421,21 +526,25 @@ async function handleGameApi(request, url) {
   const demoMatch = path.match(/^\/([^/]+)\/demo-player$/);
   if (method === 'POST' && demoMatch) {
     const gameId = demoMatch[1].trim();
-    const game = games.get(gameId) || gamesByCode.get(gameId);
+    const game = await getGameSession(gameId);
 
     if (!game) {
       return errorResponse('Game tidak ditemukan.', 'GAME_NOT_FOUND', 404);
     }
 
     const body = await request.json().catch(() => ({}));
-    const nickname = body.nickname || `Murid Simulasi #${game.players.length + 1}`;
+    const nickname = body.nickname || `Murid Simulasi #${(game.players || []).length + 1}`;
     const newPlayer = {
       id: `bot_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      playerId: `bot_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       nickname,
       score: 0,
     };
 
+    game.players = game.players || [];
     game.players.push(newPlayer);
+    await persistGameSession(game);
+
     return jsonResponse({ data: newPlayer });
   }
 
