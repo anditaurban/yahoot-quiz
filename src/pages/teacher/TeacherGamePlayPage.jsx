@@ -58,8 +58,8 @@ export const TeacherGamePlayPage = () => {
         setQuestion(qData);
 
         // Fetch answer statistics for this question
-        const stats = getAnswersStats(id, qData.index);
-        setAnswerStats(stats);
+        const stats = await getAnswersStats(id, qData.index);
+        setAnswerStats(stats || { totalAnswers: 0, optionCounts: {} });
 
         // Fetch current leaderboard
         const res = await getResults(id);
@@ -83,10 +83,10 @@ export const TeacherGamePlayPage = () => {
     };
   }, [id, navigate]);
 
-  const handleRevealAnswer = () => {
+  const handleRevealAnswer = async () => {
     setShowAnswer(true);
     setTimerRunning(false);
-    setQuestionStatus(id, 'feedback');
+    await setQuestionStatus(id, 'feedback');
   };
 
   const handleNext = async () => {

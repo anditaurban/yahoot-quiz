@@ -106,11 +106,50 @@ export const lmsClient = {
 // Client for Yahoot game sessions (Lobby PIN & Live Multiplayer)
 export const apiClient = {
   async get(endpoint) {
+    try {
+      const url = `/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data) {
+        return data;
+      }
+      if (data?.error) {
+        throw new ApiError(data.error.message, data.error.code, res.status);
+      }
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      // Network error or offline local server -> fallback to mockStore
+    }
+
     await delay(MOCK_DELAY);
     return this.handleMockGet(endpoint);
   },
 
   async post(endpoint, data = {}) {
+    try {
+      const url = `/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json().catch(() => null);
+      if (res.ok && resData) {
+        return resData;
+      }
+      if (resData?.error) {
+        throw new ApiError(resData.error.message, resData.error.code, res.status);
+      }
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      // Network error or offline local server -> fallback to mockStore
+    }
+
     await delay(MOCK_DELAY);
     return this.handleMockPost(endpoint, data);
   },
@@ -156,7 +195,7 @@ export const apiClient = {
     // POST /games
     if (endpoint === '/games') {
       try {
-        const game = mockStore.createGame(body.quizId);
+        const game = mockStore.createGame(body.quizId, body.quiz);
         return { data: game };
       } catch (err) {
         throw new ApiError(err.message, 'CREATE_GAME_FAILED', 400);

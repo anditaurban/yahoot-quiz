@@ -1,8 +1,8 @@
 import { apiClient } from './client';
 import { mockStore } from '../../mocks/mockStore';
 
-export const createGame = async (quizId) => {
-  const response = await apiClient.post('/games', { quizId });
+export const createGame = async (quizId, quiz = null) => {
+  const response = await apiClient.post('/games', { quizId, quiz });
   return response.data;
 };
 
@@ -12,7 +12,12 @@ export const getGame = async (code) => {
 };
 
 export const getGameById = async (gameId) => {
-  return mockStore.getGameById(gameId);
+  try {
+    const response = await apiClient.get(`/games/${gameId}`);
+    return response.data;
+  } catch {
+    return mockStore.getGameById(gameId);
+  }
 };
 
 export const joinGame = async (code, data) => {
@@ -48,14 +53,29 @@ export const getResults = async (gameId) => {
   return response.data;
 };
 
-export const getAnswersStats = (gameId, questionIndex) => {
-  return mockStore.getGameAnswersStats(gameId, questionIndex);
+export const getAnswersStats = async (gameId, questionIndex) => {
+  try {
+    const response = await apiClient.get(`/games/${gameId}/stats/${questionIndex}`);
+    return response.data;
+  } catch {
+    return mockStore.getGameAnswersStats(gameId, questionIndex);
+  }
 };
 
-export const addDemoPlayer = (gameId, nickname) => {
-  return mockStore.addDemoPlayer(gameId, nickname);
+export const addDemoPlayer = async (gameId, nickname) => {
+  try {
+    const response = await apiClient.post(`/games/${gameId}/demo-player`, { nickname });
+    return response.data;
+  } catch {
+    return mockStore.addDemoPlayer(gameId, nickname);
+  }
 };
 
-export const setQuestionStatus = (gameId, status) => {
-  return mockStore.setQuestionStatus(gameId, status);
+export const setQuestionStatus = async (gameId, status) => {
+  try {
+    const response = await apiClient.post(`/games/${gameId}/status`, { status });
+    return response.data;
+  } catch {
+    return mockStore.setQuestionStatus(gameId, status);
+  }
 };

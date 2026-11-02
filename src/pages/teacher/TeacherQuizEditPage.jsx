@@ -305,7 +305,7 @@ export const TeacherQuizEditPage = () => {
     setStartingGame(true);
     setError('');
     try {
-      const newGame = await createGame(quiz.id);
+      const newGame = await createGame(quiz.id, quiz);
       navigate(`/teacher/games/${newGame.id}/lobby`);
     } catch (err) {
       setError(err.message || 'Gagal memulai game.');

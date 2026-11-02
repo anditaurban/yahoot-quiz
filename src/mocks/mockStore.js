@@ -269,8 +269,11 @@ class MockStore {
     localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(games));
   }
 
-  createGame(quizId) {
-    const quiz = this.getQuiz(quizId);
+  createGame(quizId, quizData = null) {
+    if (quizData && quizData.id) {
+      this.registerOrUpdateQuiz(quizData);
+    }
+    const quiz = quizData || this.getQuiz(quizId);
     if (!quiz) {
       throw new Error("Kuis tidak ditemukan untuk memulai sesi game.");
     }

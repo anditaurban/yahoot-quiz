@@ -51,7 +51,7 @@ export const StudentQuizListPage = () => {
       }
 
       // Create a game session for self-paced or live play
-      const game = await createGame(quizId);
+      const game = await createGame(quizId, fullQuiz);
 
       // Auto join as solo player
       const nickname = 'Murid ' + Math.floor(Math.random() * 900 + 100);

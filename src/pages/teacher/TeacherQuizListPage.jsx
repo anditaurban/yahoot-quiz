@@ -94,7 +94,7 @@ export const TeacherQuizListPage = () => {
       if (!fullQuiz.questions || fullQuiz.questions.length === 0) {
         throw new Error('Kuis belum memiliki soal. Tambahkan minimal 1 soal sebelum memulai.');
       }
-      const newGame = await createGame(quizId);
+      const newGame = await createGame(quizId, fullQuiz);
       navigate(`/teacher/games/${newGame.id}/lobby`);
     } catch (err) {
       setError(err.message || 'Gagal membuka sesi game.');
