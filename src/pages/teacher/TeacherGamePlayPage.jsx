@@ -255,6 +255,19 @@ export const TeacherGamePlayPage = () => {
     };
   }, [id, navigate]);
 
+  // Enforce audio rules per stage:
+  // - 'question': SpongeBob plays
+  // - 'reveal': SpongeBob 100% OFF, Fanfare plays
+  // - 'leaderboard': SpongeBob 100% OFF, Leaderboard Jingle plays
+  useEffect(() => {
+    if (roundPhase !== 'question') {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    }
+  }, [roundPhase]);
+
   // Transition Step 1 -> Step 2: SOAL -> JAWABAN BENAR (Reveal)
   const transitionToReveal = async () => {
     roundPhaseRef.current = 'reveal';
@@ -278,6 +291,12 @@ export const TeacherGamePlayPage = () => {
   const transitionToLeaderboard = () => {
     roundPhaseRef.current = 'leaderboard';
     setRoundPhase('leaderboard');
+
+    // SpongeBob MUST BE OFF during Klasemen Sementara
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
 
     // Stop reveal fanfare if still playing
     if (fanfareRef.current) {
