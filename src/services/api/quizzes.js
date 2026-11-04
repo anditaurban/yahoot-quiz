@@ -215,16 +215,18 @@ export const getQuizzes = async (params = {}) => {
   }
 
   const rawList = response.tableData || [];
-  const transformedList = rawList
+  let transformedList = rawList
     .filter(item => !String(item.title || '').startsWith('__YAHOOT_'))
-    .map(item => transformLmsQuizToApp(item));
+    .map(item => transformLmsQuizToApp(item))
+    // Branch main: hilangkan kuis kurikulum LMS, hanya tampilkan kuis umum/mandiri
+    .filter(item => !item.course_id || Number(item.course_id) === 0);
 
   if (params.returnFullResponse) {
     return {
       tableData: transformedList,
-      totalRecords: response.totalRecords ?? transformedList.length,
-      totalPages: response.totalPages ?? 1,
-      currentPage: response.currentPage ?? page,
+      totalRecords: transformedList.length,
+      totalPages: Math.max(1, Math.ceil(transformedList.length / 10)),
+      currentPage: page,
     };
   }
 
@@ -553,7 +555,8 @@ export const getYahootStudentQuizzes = async (customerId = null) => {
 
   return list
     .filter((item) => !String(item.title || '').startsWith('__YAHOOT_'))
-    .map((item) => transformLmsQuizToApp(item));
+    .map((item) => transformLmsQuizToApp(item))
+    .filter((item) => !item.course_id || Number(item.course_id) === 0);
 };
 
 /**
