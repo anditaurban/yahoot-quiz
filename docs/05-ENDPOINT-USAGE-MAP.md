@@ -11,7 +11,7 @@
 
 ```mermaid
 pie title Distribusi Status Endpoint Yahoot! (Pasca Re-Integrasi Native)
-    "Tersambung Native ke LMS API": 37
+    "Tersambung Native ke LMS API": 38
     "Fallback Graceful Worker / Mock": 0
     "Manipulasi Client / LocalStorage": 0
 ```
@@ -21,10 +21,10 @@ pie title Distribusi Status Endpoint Yahoot! (Pasca Re-Integrasi Native)
 | **1. Katalog & CRUD Kuis (Guru)** | 7 | 7 (100%) | 0 | 0 (Native SQL LMS) |
 | **2. Kelola Butir Soal (Guru)** | 5 | 5 (100%) | 0 | 0 (Native DB `time_limit`, `points`) |
 | **3. Sesi Live Game & Lobi (Guru)** | 5 | 5 (100%) | Fallback Graceful Only | 0 (Native Table `yahoot_game_sessions`) |
-| **4. Kontrol Live Gameplay (Guru)** | 5 | 5 (100%) | Fallback Graceful Only | 0 (Server Auto-Reveal Guard) |
+| **4. Kontrol Live Gameplay (Guru)** | 6 | 6 (100%) | Fallback Graceful Only | 0 (Server Auto-Reveal Guard & Excel Export) |
 | **5. Join & Interaksi Murid (Murid)** | 7 | 7 (100%) | Fallback Graceful Only | 0 (Native Session & DB Constraint) |
 | **6. Latihan Mandiri / Solo Play** | 2 | 2 (100%) | Fallback Graceful Only | 0 (Native Solo Game Session) |
-| **TOTAL** | **37 Aksi** | **37 (100%)** | **Fallback Only** | **0 (Zero LocalStorage Hack)** |
+| **TOTAL** | **38 Aksi** | **38 (100%)** | **Fallback Only** | **0 (Zero LocalStorage Hack)** |
 
 ---
 
@@ -71,7 +71,8 @@ pie title Distribusi Status Endpoint Yahoot! (Pasca Re-Integrasi Native)
 | 21 | Guru menekan tombol "Kunci Jawaban" secara manual | `TeacherGamePlayPage.jsx` | `/games/:gameId/status` (`status: 'feedback'`) | `POST` | **Tersambung Native (LMS API)** | Menghentikan audio soal, menyalakan audio Fanfare, dan memberi instruksi murid untuk menampilkan hasil evaluasi. |
 | 22 | Guru membuka "Klasemen Sementara" | `TeacherGamePlayPage.jsx` | `/games/:gameId/results` | `GET` | **Tersambung Native (LMS API)** | Mengambil Top 5 klasemen terurut nilai dan streak dari tabel `yahoot_game_players`. Memutar audio jingle klasemen sementara. |
 | 23 | Guru menekan "Soal Berikutnya" | `TeacherGamePlayPage.jsx` | `/games/:gameId/next` | `POST` | **Tersambung Native (LMS API)** | Meng-increment `current_question_index`, status kembali ke `'question'`. Cooldown 2.5s mencegah double-next. |
-| 24 | Game selesai $\rightarrow$ Menampilkan Podium Juara | `TeacherGameResultPage.jsx` | `/games/:gameId/results` | `GET` | **Tersambung Native (LMS API)** | Mengambil klasemen akhir komprehensif terurut poin tertinggi untuk animasi podium 3D Juara 1, 2, 3. |
+| 24 | Game selesai $\rightarrow$ Menampilkan Podium Juara & Matriks Nilai | `TeacherGameResultPage.jsx` | `/games/:gameId/results` | `GET` | **Tersambung Native (LMS API)** | Mengambil data peringkat murid lengkap dengan rincian jawaban per butir soal (`answers: [...]`) dan ringkasan soal (`questions: [...]`). |
+| 24b | Guru mengunduh rekap evaluasi kuis ke file Excel / CSV | `TeacherGameResultPage.jsx` | `exportQuizResultsToCsv()` | `Client-side Export` | **Didukung Penuh oleh API** | Men-generate file spreadsheet format CSV dengan BOM UTF-8 yang memuat identitas kuis, kunci jawaban, matriks nilai per butir soal, dan statistik kelas. |
 
 ---
 

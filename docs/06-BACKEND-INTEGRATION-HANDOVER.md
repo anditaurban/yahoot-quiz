@@ -397,6 +397,7 @@ Buka file `TeacherGamePlayPage.jsx`:
 | 10 | Klasemen Akhir | `TeacherGameResultPage.jsx` | `GET /games/:id/results` | ✅ Lolos |
 | 11 | Tambah Soal (Time & Pts) | `QuizEditor.jsx` | `POST /add/course_quiz_question` | ✅ Lolos (Native DB) |
 | 12 | Bulk Import Soal | `TeacherQuizEditPage.jsx` | `POST /import/course_quiz_questions`| ✅ Lolos (Native DB) |
+| 13 | Rekap Jawaban & Ekspor Excel/CSV | `TeacherGameResultPage.jsx` | `GET /games/:id/results` (Matrix) | ✅ Lolos (Native DB & Client Export) |
 
 ---
 
@@ -407,8 +408,9 @@ Buka file `TeacherGamePlayPage.jsx`:
 | **Konektivitas Native API** | ✅ **SELESAI (100%)** | `src/services/api/client.js` diarahkan ke `BASE_URL = 'https://dev.katib.cloud'` dengan fallback graceful ke proxy `/api` dan `mockStore`. |
 | **Eliminasi LocalStorage** | ✅ **SELESAI (100%)** | `localStorage.setItem('yahoot_q_timelimit_...')` & `localStorage.setItem('yahoot_q_points_...')` telah dihapus di `src/services/api/quizzes.js`. Menggunakan `time_limit`, `points`, `question_type` langsung ke kolom database LMS. |
 | **Proteksi Race Condition & Auto-Transition** | ✅ **SELESAI (100%)** | `src/pages/teacher/TeacherGamePlayPage.jsx` mendengarkan `qData.gameStatus === 'feedback'` secara server-authoritative dan transisi dibuat idempoten dengan guard `justAdvancedRef`. |
+| **Ekspor Nilai & Matriks Soal Excel** | ✅ **SELESAI (100%)** | `TeacherGameResultPage.jsx` kini memiliki tombol download rekap Excel/CSV berbasis UTF-8 BOM dan tabel matriks jawaban per butir soal. |
 | **Dual-Proxy Fallback Worker** | ✅ **SELESAI (100%)** | `src/worker.js` meneruskan request `/api/games` dan `/games` langsung ke `https://dev.katib.cloud`, menjamin zero-downtime. |
-| **Build & Lint Verification** | ✅ **SELESAI (100%)** | `npm run build` sukses 100% tanpa error (Exit code 0, 23.07s). |
+| **Build & Lint Verification** | ✅ **SELESAI (100%)** | `npm run build` sukses 100% tanpa error. |
 
 ---
 *Laporan ini disimpan di repositori backend LMS (`integration/2026-11-04_Laporan_Balasan_Integrasi_Yahoot_Multiplayer_Backend.md`) dan disinkronkan ke repositori Yahoot (`docs/06-BACKEND-INTEGRATION-HANDOVER.md`).*

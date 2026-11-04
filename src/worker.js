@@ -627,19 +627,55 @@ async function handleGameApi(request, url) {
 
     const sortedPlayers = [...(game.players || [])]
       .sort((a, b) => (b.score || 0) - (a.score || 0))
-      .map((p, idx) => ({
-        playerId: p.id || p.playerId,
-        id: p.id || p.playerId,
-        nickname: p.nickname,
-        score: p.score || 0,
-        streak: p.streak || 0,
-        rank: idx + 1,
-      }));
+      .map((p, idx) => {
+        const pId = p.id || p.playerId;
+        const playerAnswers = [];
+        (game.questions || []).forEach((q, qIdx) => {
+          const ans = game.answers && game.answers[qIdx] && game.answers[qIdx][pId];
+          if (ans) {
+            playerAnswers.push({
+              questionIndex: qIdx,
+              questionId: q.id || `q_${qIdx}`,
+              optionId: ans.optionId,
+              isCorrect: Boolean(ans.isCorrect),
+              pointsEarned: Number(ans.pointsEarned) || 0,
+              responseTimeSeconds: Number(ans.responseTimeSeconds) || 0,
+              submittedAt: ans.submittedAt,
+            });
+          }
+        });
+        const totalCorrect = playerAnswers.filter((a) => a.isCorrect).length;
+        return {
+          playerId: pId,
+          id: pId,
+          nickname: p.nickname,
+          score: p.score || 0,
+          streak: p.streak || 0,
+          rank: idx + 1,
+          totalCorrect,
+          totalAnswered: playerAnswers.length,
+          answers: playerAnswers,
+        };
+      });
+
+    const questionsSummary = (game.questions || []).map((q, idx) => ({
+      index: idx,
+      id: q.id || `q_${idx}`,
+      question: q.question || q.question_text || '',
+      type: q.type || 'multiple_choice',
+      correctAnswer: q.correct_answer || q.correctOptionId || '',
+      points: Number(q.points) || 100,
+      timeLimit: Number(q.timeLimit) || 20,
+    }));
 
     return jsonResponse({
       data: {
+        gameId: game.id,
+        pinCode: game.code,
         quizTitle: game.quizTitle,
         totalQuestions: game.totalQuestions,
+        totalPlayers: sortedPlayers.length,
+        questions: questionsSummary,
         players: sortedPlayers,
       },
     });
