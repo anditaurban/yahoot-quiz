@@ -411,8 +411,9 @@ export const TeacherQuizListPage = () => {
 
                         {/* Rekap Nilai Button */}
                         {quizSessions.length > 0 && (
-                          <button
-                            type="button"
+                          <Button
+                            variant="success"
+                            size="sm"
                             onClick={() => {
                               if (quizSessions.length === 1) {
                                 handleDownloadHistoryExcel(quizSessions[0]);
@@ -422,15 +423,15 @@ export const TeacherQuizListPage = () => {
                             }}
                             disabled={downloadingSessionId === (quizSessions[0]?.id || quizSessions[0]?.gameId)}
                             title="Unduh rekap nilai siswa Excel (.csv)"
-                            className="px-2 py-1 text-xs font-display font-bold bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-slate-900 rounded-block shadow-block-xs flex items-center gap-1 transition-transform active:translate-y-0.5 disabled:opacity-50"
+                            className="flex items-center gap-1.5"
                           >
                             <Download className="w-3.5 h-3.5 stroke-[2.5]" />
                             <span>
                               {downloadingSessionId === (quizSessions[0]?.id || quizSessions[0]?.gameId)
-                                ? '...'
+                                ? 'Mengunduh...'
                                 : `Rekap${quizSessions.length > 1 ? ` (${quizSessions.length})` : ''}`}
                             </span>
-                          </button>
+                          </Button>
                         )}
                       </div>
 

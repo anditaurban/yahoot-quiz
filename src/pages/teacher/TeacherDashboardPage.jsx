@@ -374,8 +374,9 @@ export const TeacherDashboardPage = () => {
 
                           {/* Rekap Nilai Button per Quiz Card */}
                           {quizSessions.length > 0 ? (
-                            <button
-                              type="button"
+                            <Button
+                              variant="success"
+                              size="sm"
                               onClick={() => {
                                 if (quizSessions.length === 1) {
                                   handleDownloadHistoryExcel(quizSessions[0]);
@@ -385,7 +386,7 @@ export const TeacherDashboardPage = () => {
                               }}
                               disabled={downloadingSessionId === (quizSessions[0]?.id || quizSessions[0]?.gameId)}
                               title="Unduh rekap nilai siswa dalam format Excel (.csv)"
-                              className="px-2.5 py-1 text-xs font-display font-bold bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-slate-900 rounded-block shadow-block-xs flex items-center gap-1 transition-transform active:translate-y-0.5 disabled:opacity-50"
+                              className="flex items-center gap-1.5"
                             >
                               <Download className="w-3.5 h-3.5 stroke-[2.5]" />
                               <span>
@@ -393,14 +394,18 @@ export const TeacherDashboardPage = () => {
                                   ? 'Mengunduh...'
                                   : `Rekap Nilai${quizSessions.length > 1 ? ` (${quizSessions.length})` : ''}`}
                               </span>
-                            </button>
+                            </Button>
                           ) : (
-                            <span
-                              className="px-2 py-1 text-[11px] font-bold text-slate-400 border border-dashed border-slate-300 rounded-block select-none"
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled
                               title="Kuis ini belum pernah dimainkan dalam sesi live"
+                              className="opacity-40 cursor-not-allowed border-dashed flex items-center gap-1.5"
                             >
-                              Belum Ada Sesi
-                            </span>
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Rekap Nilai</span>
+                            </Button>
                           )}
                         </div>
 
