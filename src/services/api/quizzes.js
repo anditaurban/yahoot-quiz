@@ -40,25 +40,20 @@ export const transformLmsQuestionToApp = (q) => {
   }
 
   const qId = q.question_id || q.id;
-  const storedLimit = typeof window !== 'undefined' && qId
-    ? localStorage.getItem(`yahoot_q_timelimit_${qId}`)
-    : null;
-  const storedPoints = typeof window !== 'undefined' && qId
-    ? localStorage.getItem(`yahoot_q_points_${qId}`)
-    : null;
 
+  // Nilai dibaca langsung dari database LMS (kolom native time_limit & points)
   const resolvedTimeLimit = Number(
     q.timeLimit !== undefined
       ? q.timeLimit
       : q.time_limit !== undefined && Number(q.time_limit) > 0 && Number(q.time_limit) <= 300
       ? q.time_limit
-      : storedLimit || 20
+      : 20
   ) || 20;
 
   const resolvedPoints = Number(
     q.points !== undefined
       ? q.points
-      : storedPoints || 100
+      : 100
   ) || 100;
 
   return {
@@ -83,18 +78,21 @@ export const transformLmsQuestionToApp = (q) => {
  * Supports PILIH (multiple choice / true-false) and KETIK (short answer)
  */
 export const transformAppQuestionToLms = (quizId, q, ownerId = DEFAULT_OWNER_ID) => {
-  const questionType = q.type || 'multiple_choice';
+  const questionType = q.type || q.question_type || 'multiple_choice';
 
   if (questionType === 'short_answer') {
     return {
       quiz_id: Number(quizId || 0),
       owner_id: Number(ownerId || DEFAULT_OWNER_ID),
+      question_type: 'short_answer',
       question_text: (q.question || q.question_text || '').trim(),
       option_a: null,
       option_b: null,
       option_c: null,
       option_d: null,
       correct_answer: (q.correct_answer || q.correctOptionId || '').trim(),
+      time_limit: Number(q.timeLimit !== undefined ? q.timeLimit : (q.time_limit !== undefined ? q.time_limit : 20)) || 20,
+      points: Number(q.points !== undefined ? q.points : 100) || 100,
       order_index: Number(q.order_index || 1),
     };
   }
@@ -129,12 +127,15 @@ export const transformAppQuestionToLms = (quizId, q, ownerId = DEFAULT_OWNER_ID)
   return {
     quiz_id: Number(quizId || 0),
     owner_id: Number(ownerId || DEFAULT_OWNER_ID),
+    question_type: questionType,
     question_text: (q.question || q.question_text || '').trim(),
     option_a: optA,
     option_b: optB,
     option_c: optC,
     option_d: optD,
     correct_answer: correctAnswer,
+    time_limit: Number(q.timeLimit !== undefined ? q.timeLimit : (q.time_limit !== undefined ? q.time_limit : 20)) || 20,
+    points: Number(q.points !== undefined ? q.points : 100) || 100,
     order_index: Number(q.order_index || 1),
   };
 };
@@ -375,18 +376,12 @@ export const createQuestion = async (quizId, questionData) => {
   const payload = transformAppQuestionToLms(quizId, questionData, questionData.owner_id || DEFAULT_OWNER_ID);
   const response = await lmsClient.post('/add/course_quiz_question', payload);
 
-  const qId = response.question_id;
-  if (typeof window !== 'undefined' && qId) {
-    if (questionData.timeLimit) localStorage.setItem(`yahoot_q_timelimit_${qId}`, String(questionData.timeLimit));
-    if (questionData.points) localStorage.setItem(`yahoot_q_points_${qId}`, String(questionData.points));
-  }
-
   const createdQuestion = transformLmsQuestionToApp({
     ...payload,
     ...questionData,
     question_id: response.question_id,
-    timeLimit: questionData.timeLimit !== undefined ? questionData.timeLimit : 20,
-    points: questionData.points !== undefined ? questionData.points : 100,
+    timeLimit: questionData.timeLimit !== undefined ? questionData.timeLimit : (response.time_limit || 20),
+    points: questionData.points !== undefined ? questionData.points : (response.points || 100),
   });
 
   return createdQuestion;
@@ -471,11 +466,6 @@ export const updateQuestion = async (quizIdOrQuestionId, maybeQuestionIdOrData, 
   const payload = transformAppQuestionToLms(quizId || 0, data);
   delete payload.quiz_id;
   delete payload.owner_id;
-
-  if (typeof window !== 'undefined' && questionId) {
-    if (data.timeLimit !== undefined) localStorage.setItem(`yahoot_q_timelimit_${questionId}`, String(data.timeLimit));
-    if (data.points !== undefined) localStorage.setItem(`yahoot_q_points_${questionId}`, String(data.points));
-  }
 
   const response = await lmsClient.put(`/update/course_quiz_question/${questionId}`, payload);
   return transformLmsQuestionToApp({

@@ -157,8 +157,36 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // Route /api/games requests to Worker API logic
-    if (url.pathname.startsWith('/api/games')) {
+    // Route /api/games and /games requests: Try Native LMS API Backend first, fallback to worker logic
+    if (url.pathname.startsWith('/api/games') || url.pathname.startsWith('/games')) {
+      try {
+        const targetPath = url.pathname.replace(/^\/api/, '');
+        const backendUrl = `${KATIB_BASE}${targetPath}${url.search}`;
+        const clonedReq = request.clone();
+        const fwdRes = await fetch(backendUrl, {
+          method: request.method,
+          headers: {
+            'Authorization': `Bearer ${KATIB_TOKEN}`,
+            'Content-Type': request.headers.get('Content-Type') || 'application/json',
+            'Accept': 'application/json',
+          },
+          body: ['POST', 'PUT', 'PATCH'].includes(request.method) ? await clonedReq.text() : undefined,
+        });
+
+        if (fwdRes.ok) {
+          const resText = await fwdRes.text();
+          return new Response(resText, {
+            status: fwdRes.status,
+            headers: {
+              ...CORS_HEADERS,
+              'Content-Type': 'application/json',
+            },
+          });
+        }
+      } catch (err) {
+        // Fallback to Worker API logic if remote backend 404 or network hiccup
+      }
+
       try {
         return await handleGameApi(request, url);
       } catch (err) {

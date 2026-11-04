@@ -104,12 +104,47 @@ export const lmsClient = {
 };
 
 // Client for Yahoot game sessions (Lobby PIN & Live Multiplayer)
+// Seamlessly connects to Native LMS API Backend with worker/mockStore fallback
 export const apiClient = {
+  getBaseUrl() {
+    return BASE_URL;
+  },
+
   async get(endpoint) {
+    const sep = endpoint.includes('?') ? '&' : '?';
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+    // 1. Prioritas Utama: Panggil Native LMS API Backend secara langsung
     try {
-      const sep = endpoint.includes('?') ? '&' : '?';
-      const url = `/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}${sep}_t=${Date.now()}`;
-      const res = await fetch(url, {
+      const nativeUrl = `${BASE_URL}${path}${sep}_t=${Date.now()}`;
+      const res = await fetch(nativeUrl, {
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Authorization': `Bearer ${AUTH_TOKEN}`,
+        },
+      });
+
+      const data = await res.json().catch(() => null);
+      if (res.ok && data) {
+        return data;
+      }
+      if (data?.error && res.status !== 404) {
+        throw new ApiError(data.error.message, data.error.code, res.status);
+      }
+      if (data?.message && res.status !== 404) {
+        throw new ApiError(data.message, 'API_ERROR', res.status);
+      }
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      // Lanjut ke fallback jika 404 atau network error
+    }
+
+    // 2. Fallback: Panggil Cloudflare Worker / Reverse Proxy Lokal
+    try {
+      const workerUrl = `/api${path}${sep}_t=${Date.now()}`;
+      const res = await fetch(workerUrl, {
         cache: 'no-store',
         headers: {
           'Accept': 'application/json',
@@ -125,17 +160,48 @@ export const apiClient = {
       }
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      // Network error or offline local server -> fallback to mockStore
     }
 
+    // 3. Fallback: MockStore untuk lingkungan offline total
     await delay(MOCK_DELAY);
     return this.handleMockGet(endpoint);
   },
 
   async post(endpoint, data = {}) {
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+    // 1. Prioritas Utama: Kirim ke Native LMS API Backend secara langsung
     try {
-      const url = `/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-      const res = await fetch(url, {
+      const nativeUrl = `${BASE_URL}${path}`;
+      const res = await fetch(nativeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${AUTH_TOKEN}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      const resData = await res.json().catch(() => null);
+      if (res.ok && resData) {
+        return resData;
+      }
+      if (resData?.error && res.status !== 404) {
+        throw new ApiError(resData.error.message, resData.error.code, res.status);
+      }
+      if (resData?.message && res.status !== 404) {
+        throw new ApiError(resData.message, 'API_ERROR', res.status);
+      }
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      // Lanjut ke fallback jika 404 atau network error
+    }
+
+    // 2. Fallback: Kirim ke Cloudflare Worker / Reverse Proxy Lokal
+    try {
+      const workerUrl = `/api${path}`;
+      const res = await fetch(workerUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,9 +218,9 @@ export const apiClient = {
       }
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      // Network error or offline local server -> fallback to mockStore
     }
 
+    // 3. Fallback: MockStore untuk lingkungan offline total
     await delay(MOCK_DELAY);
     return this.handleMockPost(endpoint, data);
   },

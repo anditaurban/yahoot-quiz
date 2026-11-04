@@ -240,11 +240,10 @@ export const TeacherGamePlayPage = () => {
           setLeaderboard(res.players);
         }
 
-        // Competitive flow: Auto-transition to 'reveal' ONLY when all players have submitted answers for THIS question
-        const totalP = (gameData.players && gameData.players.length > 0) ? gameData.players.length : 0;
-        const totalAns = stats?.totalAnswers || 0;
-        const isCurrentQuestion = qData.index === currentQuestionIndexRef.current;
-        if (!justAdvancedRef.current && roundPhaseRef.current === 'question' && isCurrentQuestion && totalP > 0 && totalAns > 0 && totalAns >= totalP) {
+        // Server authoritative auto-reveal or all players answered
+        if (qData.gameStatus === 'feedback' && roundPhaseRef.current === 'question') {
+          transitionToReveal();
+        } else if (!justAdvancedRef.current && roundPhaseRef.current === 'question' && isCurrentQuestion && totalP > 0 && totalAns > 0 && totalAns >= totalP) {
           transitionToReveal();
         }
       } catch (err) {
@@ -279,6 +278,7 @@ export const TeacherGamePlayPage = () => {
 
   // Transition Step 1 -> Step 2: SOAL -> JAWABAN BENAR (Reveal)
   const transitionToReveal = async () => {
+    if (roundPhaseRef.current === 'reveal') return;
     roundPhaseRef.current = 'reveal';
     setRoundPhase('reveal');
     setTimerRunning(false);
