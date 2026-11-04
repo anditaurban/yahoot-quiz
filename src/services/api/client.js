@@ -41,12 +41,18 @@ export const lmsClient = {
     const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     const headers = this.getHeaders(options.headers);
 
+    const controller = new AbortController();
+    const timeout = options.timeout || 3500;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
     try {
       const response = await fetch(url, {
         cache: 'no-store',
+        signal: controller.signal,
         ...options,
         headers,
       });
+      clearTimeout(timeoutId);
 
       let json;
       const contentType = response.headers.get('content-type');
@@ -116,15 +122,19 @@ export const apiClient = {
 
     // 1. Prioritas Utama: Panggil Native LMS API Backend secara langsung
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
       const nativeUrl = `${BASE_URL}${path}${sep}_t=${Date.now()}`;
       const res = await fetch(nativeUrl, {
         cache: 'no-store',
+        signal: controller.signal,
         headers: {
           'Accept': 'application/json',
           'Cache-Control': 'no-cache',
           'Authorization': `Bearer ${AUTH_TOKEN}`,
         },
       });
+      clearTimeout(timeoutId);
 
       const data = await res.json().catch(() => null);
       if (res.ok && data) {
@@ -172,9 +182,12 @@ export const apiClient = {
 
     // 1. Prioritas Utama: Kirim ke Native LMS API Backend secara langsung
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
       const nativeUrl = `${BASE_URL}${path}`;
       const res = await fetch(nativeUrl, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -182,6 +195,7 @@ export const apiClient = {
         },
         body: JSON.stringify(data),
       });
+      clearTimeout(timeoutId);
 
       const resData = await res.json().catch(() => null);
       if (res.ok && resData) {
