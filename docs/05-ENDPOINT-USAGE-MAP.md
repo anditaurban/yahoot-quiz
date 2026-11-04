@@ -93,6 +93,7 @@ pie title Distribusi Status Endpoint Yahoot! (Pasca Re-Integrasi Native)
 | 35 | Melihat skor dan peringkat akhir pribadi | `StudentResultPage.jsx` | `/games/:gameId/results` | `GET` | **Tersambung Native (LMS API)** | Mengambil peringkat dan rincian skor pribadi langsung dari tabel `yahoot_game_players`. |
 | 36 | Membuka katalog kuis mandiri (Solo Mode) | `StudentQuizListPage.jsx` | `/list/yahoot_quiz/:customer_id` | `GET` | **Tersambung Native** | Mengambil kuis umum publik LMS yang dapat dikerjakan siswa secara mandiri. |
 | 37 | Memulai pengerjaan kuis solo mandiri | `StudentQuizListPage.jsx` | `/games` & Auto-Join | `POST` | **Tersambung Native (LMS API)** | Membuat sesi kuis solo di tabel `yahoot_game_sessions` secara native. |
+| 38 | Riwayat sesi kuis & unduh rekap nilai Excel | `TeacherDashboardPage.jsx` | `/games/history` | `GET` | **Tersambung Native (LMS API)** | Mengambil riwayat seluruh sesi kuis yang pernah diselenggarakan guru dan mengekspor CSV/Excel matriks nilai kapan saja. |
 
 ---
 

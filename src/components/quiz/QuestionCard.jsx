@@ -32,9 +32,9 @@ export const QuestionCard = ({
         </div>
       </div>
 
-      {/* Prominent Timer with Seconds & Progress Bar */}
+      {/* Prominent Timer with Running Progress Bar */}
       {showTimer && (
-        <div className="bg-white/80 backdrop-blur-sm border-2 border-slate-900 rounded-block p-2 sm:p-2.5 shadow-block-xs">
+        <div className="bg-white/80 backdrop-blur-sm border-2 border-slate-900 rounded-block p-1.5 sm:p-2 shadow-block-xs">
           <Timer
             duration={timeLimit}
             initialTimeLeft={remainingSeconds}

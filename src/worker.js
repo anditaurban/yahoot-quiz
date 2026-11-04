@@ -203,6 +203,25 @@ async function handleGameApi(request, url) {
   const method = request.method;
   const path = url.pathname.replace(/^\/api\/games/, '');
 
+  // 0. GET /api/games/history -> List past game sessions for teacher history & recap
+  if (method === 'GET' && (path === '/history' || path === '/history/')) {
+    const gamesObj = await getCentralGames();
+    const list = Object.values(gamesObj).map((g) => ({
+      id: g.id,
+      gameId: g.id,
+      pinCode: g.code,
+      quizId: g.quizId,
+      quizTitle: g.quizTitle || 'Yahoot! Quiz',
+      status: g.status,
+      totalQuestions: g.totalQuestions || (g.questions || []).length || 0,
+      totalPlayers: (g.players || []).length,
+      createdAt: g.createdAt || new Date().toISOString(),
+      updatedAt: g.updatedAt || Date.now(),
+    })).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return jsonResponse({ data: list });
+  }
+
   // 1. POST /api/games -> Create game session
   if (method === 'POST' && (path === '' || path === '/')) {
     const body = await request.json().catch(() => ({}));

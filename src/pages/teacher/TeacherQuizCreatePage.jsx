@@ -15,8 +15,8 @@ import {
 export const TeacherQuizCreatePage = () => {
   const navigate = useNavigate();
 
-  // Course Mode: 'pilih' (LMS Course) | 'ketik' (Custom Course/Topic) | 'bebas' (General Standalone)
-  const [courseMode, setCourseMode] = useState('ketik');
+  // Course Mode: 'bebas' (General Standalone - Main branch default) | 'pilih' (LMS Course - Master only) | 'ketik' (Custom - Master only)
+  const [courseMode, setCourseMode] = useState('bebas');
 
   // Form State
   const [courses, setCourses] = useState([]);
@@ -151,122 +151,64 @@ export const TeacherQuizCreatePage = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Course Mode Selector */}
             <div>
-              <label className="block text-xs sm:text-sm font-display font-bold text-slate-900 mb-1.5">
-                Mode Kursus / Topik
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs sm:text-sm font-display font-bold text-slate-900">
+                  Mode Kuis / Topik
+                </label>
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-400">
+                  Branch Main: Mode Bebas
+                </span>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCourseMode('ketik')}
-                  className={`p-2.5 text-xs font-display font-bold border-2 border-slate-900 rounded-block text-center transition-all ${
-                    courseMode === 'ketik'
-                      ? 'bg-amber-300 text-slate-950 shadow-block'
-                      : 'bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <span className="block font-black text-sm">Mode KETIK</span>
-                  <span className="text-[11px] font-normal text-slate-700">Ketik materi bebas</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCourseMode('pilih')}
-                  className={`p-2.5 text-xs font-display font-bold border-2 border-slate-900 rounded-block text-center transition-all ${
-                    courseMode === 'pilih'
-                      ? 'bg-indigo-600 text-white shadow-block'
-                      : 'bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <span className="block font-black text-sm">Mode PILIH</span>
-                  <span className="text-[11px] font-normal">Pilih dari daftar kursus</span>
-                </button>
-
+                {/* Mode BEBAS - Only active mode on branch main */}
                 <button
                   type="button"
                   onClick={() => setCourseMode('bebas')}
                   className={`p-2.5 text-xs font-display font-bold border-2 border-slate-900 rounded-block text-center transition-all ${
                     courseMode === 'bebas'
-                      ? 'bg-emerald-500 text-slate-950 shadow-block'
+                      ? 'bg-emerald-400 text-slate-950 shadow-block'
                       : 'bg-white text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <span className="block font-black text-sm">Mode BEBAS</span>
-                  <span className="text-[11px] font-normal text-slate-700">Tanpa kursus / umum</span>
+                  <span className="text-[11px] font-normal text-slate-800">Umum & Mandiri (Aktif)</span>
+                </button>
+
+                {/* Mode PILIH - Read Only on main branch (Instructor Inovasia only on master) */}
+                <button
+                  type="button"
+                  disabled
+                  title="Mode PILIH hanya tersedia untuk akun Instructor Inovasia (Khusus di branch master)"
+                  className="p-2.5 text-xs font-display font-bold border-2 border-dashed border-slate-300 rounded-block text-center bg-slate-100 text-slate-400 cursor-not-allowed opacity-75 relative"
+                >
+                  <span className="block font-black text-sm text-slate-500">🔒 Mode PILIH</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Khusus Instructor (Read-Only)</span>
+                </button>
+
+                {/* Mode KETIK - Read Only on main branch (Master only) */}
+                <button
+                  type="button"
+                  disabled
+                  title="Mode KETIK khusus tersedia di branch master"
+                  className="p-2.5 text-xs font-display font-bold border-2 border-dashed border-slate-300 rounded-block text-center bg-slate-100 text-slate-400 cursor-not-allowed opacity-75"
+                >
+                  <span className="block font-black text-sm text-slate-500">🔒 Mode KETIK</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Khusus Master (Read-Only)</span>
                 </button>
               </div>
             </div>
 
-            {/* Mode 2: KETIK custom course title */}
-            {courseMode === 'ketik' && (
-              <div className="p-3.5 bg-amber-50 border-2 border-amber-300 rounded-block">
-                <Input
-                  label="Nama Kursus / Topik Bebas"
-                  placeholder="Contoh: Dasar Pemrograman Web, IPA Kelas 8, dsb."
-                  value={customCourseTitle}
-                  onChange={(e) => {
-                    setCustomCourseTitle(e.target.value);
-                    setError('');
-                  }}
-                  required
-                />
-                <p className="text-[11px] text-amber-900 font-medium mt-1">
-                  Kuis akan diberi label topik ini tanpa harus terdaftar sebelumnya di database kursus LMS.
+            {/* Mode BEBAS info card */}
+            <div className="p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-block text-xs text-emerald-950 flex items-start gap-2 shadow-block-xs">
+              <span className="text-base select-none">✨</span>
+              <div>
+                <strong className="font-display font-black block text-sm">Mode BEBAS Aktif</strong>
+                <p className="mt-0.5 leading-relaxed">
+                  Kuis mandiri terbuka untuk semua mata pelajaran atau materi umum tanpa perlu terhubung ke kurikulum kursus LMS. Setelah disimpan, Anda dapat langsung menyusun butir soal dan membuka sesi permainan live.
                 </p>
               </div>
-            )}
-
-            {/* Mode 1: PILIH existing course & optional section */}
-            {courseMode === 'pilih' && (
-              <div className="p-3.5 bg-indigo-50 border-2 border-indigo-200 rounded-block space-y-3">
-                {courses.length > 0 ? (
-                  <div>
-                    <label className="block text-xs sm:text-sm font-display font-bold text-slate-900 mb-1.5">
-                      Pilih Kursus Terdaftar
-                    </label>
-                    <select
-                      value={courseId}
-                      onChange={(e) => setCourseId(Number(e.target.value))}
-                      className="w-full min-h-[44px] px-3.5 py-2.5 bg-white text-sm font-semibold border-2 border-slate-900 rounded-block focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    >
-                      {courses.map(c => (
-                        <option key={c.course_id} value={c.course_id}>
-                          Kursus #{c.course_id}: {c.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-600 font-semibold">
-                    Memuat daftar kursus...
-                  </p>
-                )}
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-display font-bold text-slate-900 mb-1.5">
-                    Seksi Kurikulum Kursus (Opsional)
-                  </label>
-                  <select
-                    value={sectionId}
-                    onChange={(e) => setSectionId(e.target.value)}
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white text-sm font-semibold border-2 border-slate-900 rounded-block focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  >
-                    <option value="">-- Tanpa Seksi (General Course Quiz) --</option>
-                    {sections.map(s => (
-                      <option key={s.section_id} value={s.section_id}>
-                        Bagian {s.order_index}: {s.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* Mode 3: BEBAS feedback */}
-            {courseMode === 'bebas' && (
-              <div className="p-3 bg-emerald-50 border-2 border-emerald-300 rounded-block text-xs font-semibold text-emerald-900">
-                ✨ Kuis ini bersifat umum dan mandiri (standalone), cocok untuk ice-breaking atau permainan kuis terbuka.
-              </div>
-            )}
+            </div>
 
             <Input
               label="Judul Kuis"

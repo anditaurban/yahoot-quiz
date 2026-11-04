@@ -7,6 +7,7 @@ export const Timer = ({
   isRunning = true,
   onTimeUp,
   resetKey = null,
+  showSeconds = false,
   size = 'md', // 'sm' | 'md' | 'lg'
   className = '',
 }) => {
@@ -56,56 +57,54 @@ export const Timer = ({
     return () => clearInterval(interval);
   }, [isRunning, timeLeft, onTimeUp, safeDuration]);
 
-  const percentage = Math.max(0, Math.min(100, (timeLeft / duration) * 100));
+  const percentage = Math.max(0, Math.min(100, (timeLeft / safeDuration) * 100));
   const isUrgent = timeLeft <= 5 && timeLeft > 0;
   const isZero = timeLeft === 0;
 
   // Neo-brutalist styling & urgency color transitions
-  let badgeColor = 'bg-emerald-400 text-slate-950 border-slate-900';
   let barColor = 'bg-emerald-500';
+  let badgeColor = 'bg-emerald-400 text-slate-950 border-slate-900';
 
   if (isUrgent) {
-    badgeColor = 'bg-red-500 text-white border-red-950 animate-pulse';
     barColor = 'bg-red-500';
-  } else if (timeLeft <= Math.ceil(duration / 2)) {
-    badgeColor = 'bg-amber-300 text-slate-950 border-slate-900';
+    badgeColor = 'bg-red-500 text-white border-red-950 animate-pulse';
+  } else if (timeLeft <= Math.ceil(safeDuration / 2)) {
     barColor = 'bg-amber-400';
+    badgeColor = 'bg-amber-300 text-slate-950 border-slate-900';
   }
 
   return (
-    <div className={`w-full flex flex-col gap-1.5 ${className}`}>
-      {/* Top Countdown Label and Number Badge */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 font-display font-black text-xs sm:text-sm text-slate-900">
-          <Clock className={`w-4 h-4 shrink-0 ${isUrgent ? 'text-red-600 animate-bounce' : 'text-slate-800'}`} />
-          <span>Sisa Waktu:</span>
-        </div>
+    <div className={`w-full flex items-center gap-2 ${className}`}>
+      {/* Visual Clock Icon with Pulse/Urgency */}
+      <Clock
+        className={`w-4 h-4 shrink-0 transition-colors ${
+          isUrgent ? 'text-red-600 animate-bounce' : 'text-slate-800'
+        }`}
+      />
 
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`font-display font-black text-xs sm:text-sm px-2.5 py-0.5 border-2 rounded-block shadow-block-xs transition-colors shrink-0 ${badgeColor}`}
-          >
-            {isZero ? 'Waktu Habis!' : `${timeLeft} detik`}
-          </span>
-          <span className="text-[11px] font-bold text-slate-500 shrink-0 hidden sm:inline">
-            / {duration}s
-          </span>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
+      {/* Clean Running Progress Bar (No seconds digits to avoid pressure) */}
       <div
-        className="w-full h-3 sm:h-3.5 bg-slate-200 border-2 border-slate-900 rounded-full p-0.5 overflow-hidden shadow-block-xs"
+        className="flex-1 min-w-0 h-3 sm:h-3.5 bg-slate-200 border-2 border-slate-900 rounded-full p-0.5 overflow-hidden shadow-block-xs"
         role="progressbar"
         aria-valuenow={timeLeft}
         aria-valuemin={0}
-        aria-valuemax={duration}
+        aria-valuemax={safeDuration}
+        aria-label="Sisa Waktu Menjawab"
       >
         <div
           className={`h-full rounded-full transition-all duration-1000 ease-linear ${barColor}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
+
+      {/* Optional seconds countdown only if explicitly requested */}
+      {showSeconds && (
+        <span
+          className={`font-display font-black text-xs px-2 py-0.5 border-2 rounded-block shadow-block-xs shrink-0 ${badgeColor}`}
+        >
+          {isZero ? 'Habis!' : `${timeLeft}s`}
+        </span>
+      )}
     </div>
   );
 };

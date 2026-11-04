@@ -79,3 +79,57 @@ export const setQuestionStatus = async (gameId, status) => {
     return mockStore.setQuestionStatus(gameId, status);
   }
 };
+
+export const saveGameToHistory = (gameInfo) => {
+  if (!gameInfo || !gameInfo.id) return;
+  try {
+    const raw = localStorage.getItem('yahoot_game_history');
+    const list = raw ? JSON.parse(raw) : [];
+    const filtered = list.filter((g) => g.id !== gameInfo.id && g.gameId !== gameInfo.id);
+    filtered.unshift({
+      id: gameInfo.id,
+      gameId: gameInfo.id,
+      pinCode: gameInfo.pinCode || gameInfo.code || '',
+      quizId: gameInfo.quizId || null,
+      quizTitle: gameInfo.quizTitle || 'Yahoot! Quiz',
+      status: gameInfo.status || 'finished',
+      totalQuestions: Number(gameInfo.totalQuestions) || 0,
+      totalPlayers: Number(gameInfo.totalPlayers) || (gameInfo.players || []).length || 0,
+      createdAt: gameInfo.createdAt || new Date().toISOString(),
+      updatedAt: gameInfo.updatedAt || new Date().toISOString(),
+    });
+    localStorage.setItem('yahoot_game_history', JSON.stringify(filtered.slice(0, 50)));
+  } catch (e) {
+    console.warn('Failed to save game to localStorage history:', e);
+  }
+};
+
+export const getGameHistory = async () => {
+  let localList = [];
+  try {
+    const raw = localStorage.getItem('yahoot_game_history');
+    if (raw) localList = JSON.parse(raw);
+  } catch {}
+
+  try {
+    const response = await apiClient.get('/games/history');
+    const apiList = response.data || [];
+    const map = new Map();
+    apiList.forEach((item) => map.set(item.id || item.gameId, item));
+    localList.forEach((item) => {
+      const id = item.id || item.gameId;
+      if (!map.has(id)) {
+        map.set(id, item);
+      }
+    });
+    const merged = Array.from(map.values()).sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+    try {
+      localStorage.setItem('yahoot_game_history', JSON.stringify(merged.slice(0, 50)));
+    } catch {}
+    return merged;
+  } catch {
+    return localList;
+  }
+};

@@ -19,7 +19,7 @@ import {
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { getResults, getGameById } from '../../services/api/games';
+import { getResults, getGameById, saveGameToHistory } from '../../services/api/games';
 import { exportQuizResultsToCsv } from '../../utils/exportQuizReport';
 
 export const TeacherGameResultPage = () => {
@@ -40,6 +40,17 @@ export const TeacherGameResultPage = () => {
         setGame(gameData);
         const resData = await getResults(id);
         setResults(resData);
+        // Persist completed game into history cache
+        saveGameToHistory({
+          id,
+          pinCode: gameData?.code || resData?.pinCode || '',
+          quizId: gameData?.quizId || resData?.quizId,
+          quizTitle: gameData?.quizTitle || resData?.quizTitle || 'Yahoot! Quiz',
+          status: 'finished',
+          totalQuestions: gameData?.totalQuestions || resData?.totalQuestions || (resData?.questions || []).length || 0,
+          totalPlayers: (resData?.players || []).length,
+          createdAt: gameData?.createdAt || resData?.createdAt || new Date().toISOString(),
+        });
       } catch (err) {
         setError(err.message || 'Gagal memuat hasil kuis.');
       } finally {
