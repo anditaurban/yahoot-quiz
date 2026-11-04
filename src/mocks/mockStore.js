@@ -4,7 +4,7 @@
 const STORAGE_KEY_QUIZZES = 'yahoot_mock_quizzes';
 const STORAGE_KEY_GAMES = 'yahoot_mock_games';
 
-import { INITIAL_QUIZZES } from './initialQuizzes.js';
+import INITIAL_QUIZZES from './initial_quizzes.json';
 
 class MockStore {
   constructor() {
