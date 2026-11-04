@@ -201,23 +201,47 @@ export const getQuizzes = async (params = {}) => {
     endpoint = `/table/course_quiz/${params.courseId}/${page}${query}`;
   }
 
-  let response;
+  let response = null;
   try {
     response = await lmsClient.get(endpoint);
   } catch (err) {
     // If yahoot_quiz endpoint is unavailable, gracefully try course_quiz or fallback
     if (!endpoint.includes('/table/course_quiz')) {
-      const fallbackCourseId = params.courseId ?? DEFAULT_COURSE_ID;
-      response = await lmsClient.get(`/table/course_quiz/${fallbackCourseId}/${page}${query}`);
+      try {
+        const fallbackCourseId = params.courseId ?? DEFAULT_COURSE_ID;
+        response = await lmsClient.get(`/table/course_quiz/${fallbackCourseId}/${page}${query}`);
+      } catch (innerErr) {
+        console.warn('LMS API offline, using mockStore fallback:', innerErr?.message || innerErr);
+      }
     } else {
-      throw err;
+      console.warn('LMS API offline, using mockStore fallback:', err?.message || err);
     }
   }
 
-  const rawList = response.tableData || [];
-  let transformedList = rawList
+  if (response && response.tableData) {
+    const rawList = response.tableData || [];
+    let transformedList = rawList
+      .filter(item => !String(item.title || '').startsWith('__YAHOOT_'))
+      .map(item => transformLmsQuizToApp(item))
+      // Branch main: hilangkan kuis kurikulum LMS, hanya tampilkan kuis umum/mandiri
+      .filter(item => !item.course_id || Number(item.course_id) === 0);
+
+    if (params.returnFullResponse) {
+      return {
+        tableData: transformedList,
+        totalRecords: transformedList.length,
+        totalPages: Math.max(1, Math.ceil(transformedList.length / 10)),
+        currentPage: page,
+      };
+    }
+
+    return transformedList;
+  }
+
+  // Graceful Fallback: Ambil data kuis asli dari mockStore
+  const mockList = mockStore.getQuizzes();
+  const transformedList = (mockList || [])
     .filter(item => !String(item.title || '').startsWith('__YAHOOT_'))
-    .map(item => transformLmsQuizToApp(item))
     // Branch main: hilangkan kuis kurikulum LMS, hanya tampilkan kuis umum/mandiri
     .filter(item => !item.course_id || Number(item.course_id) === 0);
 
@@ -226,7 +250,7 @@ export const getQuizzes = async (params = {}) => {
       tableData: transformedList,
       totalRecords: transformedList.length,
       totalPages: Math.max(1, Math.ceil(transformedList.length / 10)),
-      currentPage: page,
+      currentPage: 1,
     };
   }
 
@@ -239,22 +263,35 @@ export const getQuizzes = async (params = {}) => {
  */
 export const getQuiz = async (quizId) => {
   const cacheBuster = `_t=${Date.now()}`;
-  let response;
+  let response = null;
   try {
     response = await lmsClient.get(`/detail/yahoot_quiz/${quizId}?${cacheBuster}`, {
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
     });
   } catch {
-    // Alias fallback: /detail/course_quiz/:quiz_id
-    response = await lmsClient.get(`/detail/course_quiz/${quizId}?${cacheBuster}`, {
-      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
-    });
+    try {
+      // Alias fallback: /detail/course_quiz/:quiz_id
+      response = await lmsClient.get(`/detail/course_quiz/${quizId}?${cacheBuster}`, {
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+      });
+    } catch {
+      console.warn(`LMS API detail offline for quiz #${quizId}, using mockStore`);
+    }
   }
 
-  const quizData = response.data?.quiz || response.quiz || response.data || {};
-  const questionsData = response.data?.questions || response.questions || [];
+  if (response) {
+    const quizData = response.data?.quiz || response.quiz || response.data || {};
+    const questionsData = response.data?.questions || response.questions || [];
+    return transformLmsQuizToApp(quizData, questionsData);
+  }
 
-  return transformLmsQuizToApp(quizData, questionsData);
+  // Fallback to mockStore
+  const localQuiz = mockStore.getQuiz(quizId);
+  if (localQuiz) {
+    return localQuiz;
+  }
+
+  throw new ApiError('Kuis tidak ditemukan', 'QUIZ_NOT_FOUND', 404);
 };
 
 /**
