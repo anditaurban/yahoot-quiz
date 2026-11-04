@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Search, Play, Edit3, Trash2, ArrowLeft, BookOpen, Clock, Award, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Play,
+  Edit3,
+  Trash2,
+  ArrowLeft,
+  BookOpen,
+  Clock,
+  Award,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileSpreadsheet,
+  Users,
+} from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -11,9 +27,10 @@ import {
   deleteQuiz,
   updateQuizStatus,
   getCourses,
-  DEFAULT_COURSE_ID
+  DEFAULT_COURSE_ID,
 } from '../../services/api/quizzes';
-import { createGame } from '../../services/api/games';
+import { createGame, getGameHistory, getResults, getGameById } from '../../services/api/games';
+import { exportQuizResultsToCsv } from '../../utils/exportQuizReport';
 
 export const TeacherQuizListPage = () => {
   const navigate = useNavigate();
@@ -30,6 +47,12 @@ export const TeacherQuizListPage = () => {
   const [error, setError] = useState('');
   const [startingGameId, setStartingGameId] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+
+  // History & Recap State
+  const [gameHistory, setGameHistory] = useState([]);
+  const [downloadingSessionId, setDownloadingSessionId] = useState(null);
+  const [selectedQuizForHistory, setSelectedQuizForHistory] = useState(null);
+  const [recapNotice, setRecapNotice] = useState('');
 
   // Delete modal state
   const [quizToDelete, setQuizToDelete] = useState(null);
@@ -77,9 +100,41 @@ export const TeacherQuizListPage = () => {
     }
   };
 
+  const fetchHistory = async () => {
+    try {
+      const historyData = await getGameHistory();
+      setGameHistory(historyData || []);
+    } catch (err) {
+      console.warn('Game history fetch error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchQuizzes(1, search, selectedCourseFilter);
+    fetchHistory();
   }, [selectedCourseFilter]);
+
+  const handleDownloadHistoryExcel = async (session) => {
+    const sid = session.id || session.gameId;
+    setDownloadingSessionId(sid);
+    setRecapNotice('');
+    try {
+      const [gameData, resData] = await Promise.all([
+        getGameById(sid).catch(() => session),
+        getResults(sid),
+      ]);
+      const fileName = exportQuizResultsToCsv({
+        game: gameData || session,
+        results: resData,
+      });
+      setRecapNotice(`Rekap Excel untuk PIN ${session.pinCode || session.code || sid} berhasil diunduh (${fileName})!`);
+      setTimeout(() => setRecapNotice(''), 5000);
+    } catch (err) {
+      alert(err.message || 'Gagal mengunduh file rekap kuis.');
+    } finally {
+      setDownloadingSessionId(null);
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -209,6 +264,19 @@ export const TeacherQuizListPage = () => {
           </div>
         )}
 
+        {/* Recap Notice Toast */}
+        {recapNotice && (
+          <div className="p-3.5 bg-emerald-100 border-2 border-emerald-500 rounded-block text-emerald-950 text-xs sm:text-sm font-bold flex items-center justify-between shadow-block-xs">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              {recapNotice}
+            </span>
+            <button onClick={() => setRecapNotice('')} className="underline text-xs">
+              Tutup
+            </button>
+          </div>
+        )}
+
         {/* LOADING STATE */}
         {loading && (
           <div className="p-12 text-center bg-white border-2 border-slate-900 rounded-block shadow-block">
@@ -259,94 +327,128 @@ export const TeacherQuizListPage = () => {
         {!loading && quizzes.length > 0 && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {quizzes.map((quiz) => (
-                <Card
-                  key={quiz.id}
-                  className="bg-white flex flex-col justify-between"
-                  padding="md"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="min-w-0 flex-1">
-                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block truncate">
-                          ID #{quiz.id} • {quiz.course_title ? `Topik: ${quiz.course_title}` : quiz.course_id ? `Kursus #${quiz.course_id}` : 'Kuis Bebas'} {quiz.section_name ? `(${quiz.section_name})` : ''}
-                        </span>
-                        <h3 className="font-display font-black text-lg sm:text-xl text-slate-950 leading-tight mt-0.5 break-words line-clamp-2">
-                          {quiz.title}
-                        </h3>
+              {quizzes.map((quiz) => {
+                const quizSessions = gameHistory.filter((s) => String(s.quizId) === String(quiz.id));
+
+                return (
+                  <Card
+                    key={quiz.id}
+                    className="bg-white flex flex-col justify-between"
+                    padding="md"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block truncate">
+                            ID #{quiz.id} • {quiz.course_title ? `Topik: ${quiz.course_title}` : quiz.course_id ? `Kursus #${quiz.course_id}` : 'Kuis Bebas'} {quiz.section_name ? `(${quiz.section_name})` : ''}
+                          </span>
+                          <h3 className="font-display font-black text-lg sm:text-xl text-slate-950 leading-tight mt-0.5 break-words line-clamp-2">
+                            {quiz.title}
+                          </h3>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(quiz)}
+                          disabled={statusUpdatingId === quiz.id}
+                          title="Klik untuk ubah status publish/draft"
+                          className={`text-xs px-2.5 py-0.5 rounded-full border-2 font-display font-black shrink-0 transition-all ${
+                            quiz.status === 'publish'
+                              ? 'bg-emerald-100 text-emerald-950 border-emerald-500 hover:bg-emerald-200'
+                              : 'bg-slate-100 text-slate-700 border-slate-400 hover:bg-slate-200'
+                          }`}
+                        >
+                          {statusUpdatingId === quiz.id ? '...' : quiz.status === 'publish' ? '● Publish' : '○ Draft'}
+                        </button>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(quiz)}
-                        disabled={statusUpdatingId === quiz.id}
-                        title="Klik untuk ubah status publish/draft"
-                        className={`text-xs px-2.5 py-0.5 rounded-full border-2 font-display font-black shrink-0 transition-all ${
-                          quiz.status === 'publish'
-                            ? 'bg-emerald-100 text-emerald-950 border-emerald-500 hover:bg-emerald-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-400 hover:bg-slate-200'
-                        }`}
-                      >
-                        {statusUpdatingId === quiz.id ? '...' : quiz.status === 'publish' ? '● Publish' : '○ Draft'}
-                      </button>
+                      <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 mb-3">
+                        {quiz.description || 'Tidak ada deskripsi.'}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-semibold mb-2">
+                        <span className="flex items-center gap-1 font-bold text-slate-700">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          {quiz.total_questions || quiz.questionCount || 0} Soal
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          {quiz.time_limit} Menit
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Award className="w-3.5 h-3.5" />
+                          KKM: {quiz.passing_score}
+                        </span>
+                        {quizSessions.length > 0 && (
+                          <span className="flex items-center gap-1 font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                            {quizSessions.length} Sesi Rekap
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 mb-3">
-                      {quiz.description || 'Tidak ada deskripsi.'}
-                    </p>
+                    <div className="pt-3 border-t-2 border-slate-100 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => navigate(`/teacher/quizzes/${quiz.id}/edit`)}
+                          title="Kelola pertanyaan"
+                          className="!px-2.5"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setQuizToDelete(quiz)}
+                          title="Hapus kuis"
+                          className="!px-2.5 text-red-600 hover:bg-red-50 border-red-200"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
 
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-semibold mb-2">
-                      <span className="flex items-center gap-1 font-bold text-slate-700">
-                        <BookOpen className="w-3.5 h-3.5" />
-                        {quiz.total_questions || quiz.questionCount || 0} Soal
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" />
-                        {quiz.time_limit} Menit
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Award className="w-3.5 h-3.5" />
-                        KKM: {quiz.passing_score}
-                      </span>
-                    </div>
-                  </div>
+                        {/* Rekap Nilai Button */}
+                        {quizSessions.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (quizSessions.length === 1) {
+                                handleDownloadHistoryExcel(quizSessions[0]);
+                              } else {
+                                setSelectedQuizForHistory({ quiz, sessions: quizSessions });
+                              }
+                            }}
+                            disabled={downloadingSessionId === (quizSessions[0]?.id || quizSessions[0]?.gameId)}
+                            title="Unduh rekap nilai siswa Excel (.csv)"
+                            className="px-2 py-1 text-xs font-display font-bold bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-slate-900 rounded-block shadow-block-xs flex items-center gap-1 transition-transform active:translate-y-0.5 disabled:opacity-50"
+                          >
+                            <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>
+                              {downloadingSessionId === (quizSessions[0]?.id || quizSessions[0]?.gameId)
+                                ? '...'
+                                : `Rekap${quizSessions.length > 1 ? ` (${quizSessions.length})` : ''}`}
+                            </span>
+                          </button>
+                        )}
+                      </div>
 
-                  <div className="pt-3 border-t-2 border-slate-100 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
                       <Button
-                        variant="secondary"
+                        variant="warning"
                         size="sm"
-                        onClick={() => navigate(`/teacher/quizzes/${quiz.id}/edit`)}
-                        title="Kelola pertanyaan"
-                        className="!px-2.5"
+                        loading={startingGameId === quiz.id}
+                        disabled={startingGameId === quiz.id}
+                        onClick={() => handleStartGame(quiz.id)}
+                        className="flex items-center gap-1.5"
                       >
-                        <Edit3 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setQuizToDelete(quiz)}
-                        title="Hapus kuis"
-                        className="!px-2.5 text-red-600 hover:bg-red-50 border-red-200"
-                      >
-                        <Trash2 className="w-4 h-4" />
+                        <Play className="w-3.5 h-3.5 fill-slate-950" />
+                        <span>Host Game</span>
                       </Button>
                     </div>
-
-                    <Button
-                      variant="warning"
-                      size="sm"
-                      loading={startingGameId === quiz.id}
-                      disabled={startingGameId === quiz.id}
-                      onClick={() => handleStartGame(quiz.id)}
-                      className="flex items-center gap-1.5"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-slate-950" />
-                      <span>Host Game</span>
-                    </Button>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
 
             {/* Pagination Controls */}
@@ -411,6 +513,80 @@ export const TeacherQuizListPage = () => {
             </div>
           </div>
         </Modal>
+
+        {/* RECAP HISTORY MODAL PER QUIZ */}
+        {selectedQuizForHistory && (
+          <Modal
+            isOpen={Boolean(selectedQuizForHistory)}
+            onClose={() => setSelectedQuizForHistory(null)}
+            title={`Riwayat Rekap Nilai: ${selectedQuizForHistory.quiz.title}`}
+            maxWidth="max-w-xl"
+          >
+            <div className="p-4 space-y-3">
+              <p className="text-xs text-slate-600">
+                Berikut adalah daftar sesi permainan live yang pernah di-host untuk kuis ini. Anda dapat mengunduh rekap Excel (.csv) atau melihat detail hasil kuis per sesi.
+              </p>
+
+              <div className="divide-y divide-slate-200 border-2 border-slate-900 rounded-block overflow-hidden max-h-80 overflow-y-auto">
+                {selectedQuizForHistory.sessions.map((s, idx) => {
+                  const sid = s.id || s.gameId;
+                  const dateStr = s.createdAt
+                    ? new Date(s.createdAt).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '-';
+                  const isDownloading = downloadingSessionId === sid;
+
+                  return (
+                    <div key={sid} className="p-3 bg-white hover:bg-slate-50 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-display font-black text-xs px-2 py-0.5 bg-amber-200 border border-slate-900 rounded font-mono">
+                            PIN: {s.pinCode || s.code || '-'}
+                          </span>
+                          <span className="text-xs font-bold text-slate-900">
+                            Sesi #{selectedQuizForHistory.sessions.length - idx}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 font-semibold">
+                          <span>{dateStr}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3 text-indigo-600" />
+                            {s.totalPlayers || 0} Murid
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadHistoryExcel(s)}
+                          disabled={isDownloading}
+                          className="px-2.5 py-1 text-xs font-display font-bold bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-slate-900 rounded-block shadow-block-xs flex items-center gap-1 transition-transform active:translate-y-0.5 disabled:opacity-50"
+                        >
+                          <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                          <span>{isDownloading ? 'Mengunduh...' : 'Unduh Excel'}</span>
+                        </button>
+
+                        <Link
+                          to={`/teacher/games/${sid}/results`}
+                          className="px-2.5 py-1 text-xs font-display font-bold bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-900 rounded-block shadow-block-xs"
+                        >
+                          Lihat Detail &rarr;
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     </div>
   );
