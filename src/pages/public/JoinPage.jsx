@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Gamepad2, ArrowLeft, ArrowRight, User, Camera, QrCode, X, Upload } from 'lucide-react';
+import { Gamepad2, ArrowLeft, ArrowRight, User, Camera, QrCode, X, Upload, HelpCircle } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
+import { HowToPlayModal } from '../../components/common/HowToPlayModal';
 import { getGame, joinGame } from '../../services/api/games';
 
 export const JoinPage = () => {
@@ -19,6 +20,7 @@ export const JoinPage = () => {
   const [gameInfo, setGameInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   // QR Scanner States
   const [showScanner, setShowScanner] = useState(false);
@@ -275,10 +277,19 @@ export const JoinPage = () => {
               <span>Scan QR Code dari Layar Guru</span>
             </Button>
 
-            <div className="text-center pt-2">
-              <Link to="/" className="text-xs font-bold text-slate-500 hover:text-slate-800 hover:underline">
-                &larr; Kembali ke Beranda
+            <div className="text-center pt-2 flex items-center justify-center gap-3 text-xs font-bold text-slate-500">
+              <Link to="/" className="hover:text-slate-800 hover:underline">
+                &larr; Beranda
               </Link>
+              <span>&bull;</span>
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(true)}
+                className="text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+              >
+                <HelpCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Panduan Siswa</span>
+              </button>
             </div>
           </form>
         )}
@@ -389,6 +400,13 @@ export const JoinPage = () => {
           </div>
         </Modal>
       )}
+
+      {/* How To Play Modal for Students */}
+      <HowToPlayModal
+        isOpen={showGuideModal}
+        onClose={() => setShowGuideModal(false)}
+        initialRole="siswa"
+      />
     </div>
   );
 };

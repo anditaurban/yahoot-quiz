@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { GraduationCap, Plus, Play, BookOpen, Layers, ArrowRight, Clock, Award } from 'lucide-react';
+import { GraduationCap, Plus, Play, BookOpen, Layers, ArrowRight, Clock, Award, HelpCircle } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { HowToPlayModal } from '../../components/common/HowToPlayModal';
 import { getQuizzes, getQuiz, DEFAULT_COURSE_ID } from '../../services/api/quizzes';
 import { createGame } from '../../services/api/games';
 
@@ -13,6 +14,7 @@ export const TeacherDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [startingGameId, setStartingGameId] = useState(null);
   const [error, setError] = useState('');
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   const fetchQuizzes = async () => {
     setLoading(true);
@@ -69,6 +71,16 @@ export const TeacherDashboardPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => setShowGuideModal(true)}
+              className="flex items-center gap-1.5 bg-amber-300 hover:bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-block-sm"
+            >
+              <HelpCircle className="w-4 h-4 stroke-[2.5]" />
+              <span>Panduan Guru</span>
+            </Button>
+
             <Button
               variant="primary"
               size="md"
@@ -245,6 +257,13 @@ export const TeacherDashboardPage = () => {
           )}
         </div>
       </div>
+
+      {/* How To Play Modal */}
+      <HowToPlayModal
+        isOpen={showGuideModal}
+        onClose={() => setShowGuideModal(false)}
+        initialRole="guru"
+      />
     </div>
   );
 };

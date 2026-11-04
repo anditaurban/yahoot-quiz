@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Gamepad2, GraduationCap, ArrowRight, Zap, Trophy, CheckCircle2 } from 'lucide-react';
+import { Gamepad2, GraduationCap, ArrowRight, Zap, Trophy, CheckCircle2, HelpCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { HowToPlayModal } from '../../components/common/HowToPlayModal';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [showGuideModal, setShowGuideModal] = useState(false);
+  const [guideRole, setGuideRole] = useState('guru');
+
+  const openGuide = (role = 'guru') => {
+    setGuideRole(role);
+    setShowGuideModal(true);
+  };
 
   const handleQuickJoin = (e) => {
     e.preventDefault();
@@ -20,23 +28,37 @@ export const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between game-grid-pattern py-8 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto w-full">
-        {/* Main Banner */}
-        <div className="text-center my-6 sm:my-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-300 border-2 border-slate-900 rounded-block shadow-block-sm text-xs sm:text-sm font-display font-black text-slate-950 mb-4">
-            <Zap className="w-4 h-4 fill-amber-500" />
-            <span>Kuis Interaktif Kelas & Komunitas</span>
+    <>
+      <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between game-grid-pattern py-8 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto w-full">
+          {/* Main Banner */}
+          <div className="text-center my-6 sm:my-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-300 border-2 border-slate-900 rounded-block shadow-block-sm text-xs sm:text-sm font-display font-black text-slate-950 mb-4">
+              <Zap className="w-4 h-4 fill-amber-500" />
+              <span>Kuis Interaktif Kelas & Komunitas</span>
+            </div>
+
+            <h1 className="font-display font-black text-4xl sm:text-6xl md:text-7xl text-slate-950 tracking-tight leading-none mb-4">
+              Bermain Kuis Jadi <span className="underline decoration-indigo-600 decoration-wavy decoration-2">Seru</span>
+            </h1>
+
+            <p className="text-slate-700 text-base sm:text-xl font-medium max-w-2xl mx-auto mb-6">
+              Platform kuis multiplayer cepat untuk sekolah. Guru membuat soal, murid berkompetisi dengan PIN dari gawai masing-masing.
+            </p>
+
+            {/* Quick Guide Trigger Button */}
+            <div className="flex items-center justify-center gap-3">
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => openGuide('guru')}
+                className="bg-white hover:bg-slate-100 flex items-center gap-2 shadow-block-sm"
+              >
+                <HelpCircle className="w-4 h-4 text-indigo-600 stroke-[2.5]" />
+                <span>Cara Penggunaan (Panduan Lengkap)</span>
+              </Button>
+            </div>
           </div>
-
-          <h1 className="font-display font-black text-4xl sm:text-6xl md:text-7xl text-slate-950 tracking-tight leading-none mb-4">
-            Bermain Kuis Jadi <span className="underline decoration-indigo-600 decoration-wavy decoration-2">Seru</span>
-          </h1>
-
-          <p className="text-slate-700 text-base sm:text-xl font-medium max-w-2xl mx-auto">
-            Platform kuis multiplayer cepat untuk sekolah. Guru membuat soal, murid berkompetisi dengan PIN dari gawai masing-masing.
-          </p>
-        </div>
 
         {/* Dual Portals (Student vs Teacher) */}
         <div className="grid md:grid-cols-2 gap-6 my-8">
@@ -198,5 +220,13 @@ export const LandingPage = () => {
         </div>
       </div>
     </div>
-  );
+
+    {/* How To Play Modal */}
+    <HowToPlayModal
+      isOpen={showGuideModal}
+      onClose={() => setShowGuideModal(false)}
+      initialRole={guideRole}
+    />
+  </>
+);
 };
