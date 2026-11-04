@@ -573,12 +573,6 @@ export const TeacherQuizListPage = () => {
                           <span>{isDownloading ? 'Mengunduh...' : 'Unduh Excel'}</span>
                         </button>
 
-                        <Link
-                          to={`/teacher/games/${sid}/results`}
-                          className="px-2.5 py-1 text-xs font-display font-bold bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-900 rounded-block shadow-block-xs"
-                        >
-                          Lihat Detail &rarr;
-                        </Link>
                       </div>
                     </div>
                   );
