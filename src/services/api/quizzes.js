@@ -529,11 +529,31 @@ export const getCourses = async (ownerId = DEFAULT_OWNER_ID, page = 1) => {
  */
 export const getYahootStudentQuizzes = async (customerId = null) => {
   const endpoint = customerId ? `/list/yahoot_quiz/${customerId}` : '/list/yahoot_quiz';
-  const response = await lmsClient.get(endpoint);
-  const list = response.listData || [];
+  let response;
+  try {
+    response = await lmsClient.get(endpoint);
+  } catch (err) {
+    console.warn('Student quiz list error:', err);
+    response = { listData: [] };
+  }
+
+  let list = response?.listData || [];
+
+  // Fallback to all published quizzes if listData is empty
+  if (!list || list.length === 0) {
+    try {
+      const allQuizzes = await getQuizzes();
+      return (allQuizzes || []).filter(
+        (q) => q.status === 'publish' || q.status === 'published'
+      );
+    } catch {
+      return [];
+    }
+  }
+
   return list
-    .filter(item => !String(item.title || '').startsWith('__YAHOOT_'))
-    .map(item => transformLmsQuizToApp(item));
+    .filter((item) => !String(item.title || '').startsWith('__YAHOOT_'))
+    .map((item) => transformLmsQuizToApp(item));
 };
 
 /**
