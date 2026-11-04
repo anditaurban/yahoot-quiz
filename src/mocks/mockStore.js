@@ -4,7 +4,118 @@
 const STORAGE_KEY_QUIZZES = 'yahoot_mock_quizzes';
 const STORAGE_KEY_GAMES = 'yahoot_mock_games';
 
-import INITIAL_QUIZZES from './initial_quizzes.json';
+const INITIAL_QUIZZES = [
+  {
+    id: 1,
+    title: "JavaScript Fundamental",
+    description: "Kuis seru menguji pemahaman dasar sintaksis dan logika JavaScript.",
+    questionCount: 4,
+    createdAt: "2026-09-27T10:00:00Z",
+    questions: [
+      {
+        id: "q1_1",
+        type: "multiple_choice",
+        question: "Manakah cara yang tepat untuk mendeklarasikan variabel yang nilainya tidak dapat diubah?",
+        options: [
+          { id: "a", text: "var" },
+          { id: "b", text: "let" },
+          { id: "c", text: "const" },
+          { id: "d", text: "immutable" }
+        ],
+        correctOptionId: "c",
+        timeLimit: 20,
+        points: 100
+      },
+      {
+        id: "q1_2",
+        type: "true_false",
+        question: "Operasi 'typeof null' di JavaScript menghasilkan string 'object'.",
+        options: [
+          { id: "true", text: "True" },
+          { id: "false", text: "False" }
+        ],
+        correctOptionId: "true",
+        timeLimit: 15,
+        points: 100
+      },
+      {
+        id: "q1_3",
+        type: "multiple_choice",
+        question: "Apa hasil dari evaluasi ekspresi: [1, 2, 3].map(x => x * 2)?",
+        options: [
+          { id: "a", text: "[2, 4, 6]" },
+          { id: "b", text: "[1, 2, 3, 2]" },
+          { id: "c", text: "12" },
+          { id: "d", text: "[1, 4, 9]" }
+        ],
+        correctOptionId: "a",
+        timeLimit: 20,
+        points: 100
+      },
+      {
+        id: "q1_4",
+        type: "true_false",
+        question: "Operator '===' membandingkan nilai tanpa melakukan konversi tipe data (type coercion).",
+        options: [
+          { id: "true", text: "True" },
+          { id: "false", text: "False" }
+        ],
+        correctOptionId: "true",
+        timeLimit: 15,
+        points: 100
+      }
+    ]
+  },
+  {
+    id: 2,
+    title: "Sains & Tata Surya",
+    description: "Petualangan luar angkasa dan pengetahuan alam semesta untuk pelajar.",
+    questionCount: 3,
+    createdAt: "2026-09-27T11:30:00Z",
+    questions: [
+      {
+        id: "q2_1",
+        type: "multiple_choice",
+        question: "Planet manakah yang dikenal sebagai Planet Merah dalam tata surya kita?",
+        options: [
+          { id: "a", text: "Venus" },
+          { id: "b", text: "Mars" },
+          { id: "c", text: "Jupiter" },
+          { id: "d", text: "Saturnus" }
+        ],
+        correctOptionId: "b",
+        timeLimit: 20,
+        points: 100
+      },
+      {
+        id: "q2_2",
+        type: "true_false",
+        question: "Matahari adalah sebuah bintang, bukan planet.",
+        options: [
+          { id: "true", text: "True" },
+          { id: "false", text: "False" }
+        ],
+        correctOptionId: "true",
+        timeLimit: 15,
+        points: 100
+      },
+      {
+        id: "q2_3",
+        type: "multiple_choice",
+        question: "Gas apakah yang paling melimpah di atmosfer bumi kita?",
+        options: [
+          { id: "a", text: "Oksigen" },
+          { id: "b", text: "Karbon Dioksida" },
+          { id: "c", text: "Nitrogen" },
+          { id: "d", text: "Helium" }
+        ],
+        correctOptionId: "c",
+        timeLimit: 20,
+        points: 100
+      }
+    ]
+  }
+];
 
 class MockStore {
   constructor() {
@@ -12,72 +123,38 @@ class MockStore {
   }
 
   initStore() {
-    try {
-      const rawQuizzes = localStorage.getItem(STORAGE_KEY_QUIZZES);
-      let needReset = false;
-      if (!rawQuizzes) {
-        needReset = true;
-      } else {
-        const parsed = JSON.parse(rawQuizzes);
-        if (!Array.isArray(parsed) || parsed.length === 0 || parsed.some(q => q.title === 'JavaScript Fundamental')) {
-          needReset = true;
-        }
-      }
-      if (needReset) {
-        localStorage.setItem(STORAGE_KEY_QUIZZES, JSON.stringify(INITIAL_QUIZZES));
-      }
-    } catch {
-      // ignore localStorage errors
+    const rawQuizzes = localStorage.getItem(STORAGE_KEY_QUIZZES);
+    if (!rawQuizzes) {
+      localStorage.setItem(STORAGE_KEY_QUIZZES, JSON.stringify(INITIAL_QUIZZES));
     }
-
-    try {
-      const rawGames = localStorage.getItem(STORAGE_KEY_GAMES);
-      if (!rawGames) {
-        localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify({}));
-      }
-    } catch {
-      // ignore
+    const rawGames = localStorage.getItem(STORAGE_KEY_GAMES);
+    if (!rawGames) {
+      localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify({}));
     }
   }
 
   getQuizzes() {
     try {
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY_QUIZZES) || '[]');
-      if (Array.isArray(data) && data.length > 0) {
-        return data.map(q => ({
-          id: q.id,
-          quiz_id: q.id,
-          owner_id: q.owner_id || 4409,
-          course_id: q.course_id ?? null,
-          course_title: q.course_title ?? null,
-          title: q.title,
-          description: q.description || '',
-          passing_score: q.passing_score ?? 75,
-          time_limit: q.time_limit ?? 30,
-          status: q.status || 'publish',
-          questionCount: q.questions ? q.questions.length : (q.questionCount || 0),
-          total_questions: q.questions ? q.questions.length : (q.questionCount || 0),
-          createdAt: q.createdAt,
-          questions: q.questions || [],
-        }));
-      }
+      return data.map(q => ({
+        id: q.id,
+        title: q.title,
+        description: q.description,
+        questionCount: q.questions ? q.questions.length : (q.questionCount || 0),
+        createdAt: q.createdAt
+      }));
     } catch {
-      // fallback
+      return INITIAL_QUIZZES;
     }
-    return INITIAL_QUIZZES;
   }
 
   getQuiz(id) {
-    try {
-      const data = JSON.parse(localStorage.getItem(STORAGE_KEY_QUIZZES) || '[]');
-      const quiz = data.find(q => String(q.id) === String(id) || String(q.quiz_id) === String(id));
-      if (quiz) {
-        return quiz;
-      }
-    } catch {
-      // fallback
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY_QUIZZES) || '[]');
+    const quiz = data.find(q => String(q.id) === String(id));
+    if (!quiz) {
+      return null;
     }
-    return INITIAL_QUIZZES.find(q => String(q.id) === String(id) || String(q.quiz_id) === String(id)) || null;
+    return quiz;
   }
 
   createQuiz({ title, description }) {

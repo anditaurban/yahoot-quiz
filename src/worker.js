@@ -13,16 +13,12 @@ const gamesByCode = new Map();
 // Fetch all active games from Katib centralized database
 async function fetchCentralGames() {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
     const res = await fetch(`${KATIB_BASE}/detail/yahoot_quiz/${KATIB_RECORD_ID}?_t=${Date.now()}`, {
       headers: {
         'Authorization': `Bearer ${KATIB_TOKEN}`,
         'Accept': 'application/json',
       },
-      signal: controller.signal,
     });
-    clearTimeout(timeoutId);
     if (!res.ok) return {};
     const json = await res.json();
     const desc = json.data?.quiz?.description || json.quiz?.description;
@@ -48,11 +44,8 @@ async function saveCentralGames(gamesObj) {
       }
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
     await fetch(`${KATIB_BASE}/update/yahoot_quiz/${KATIB_RECORD_ID}`, {
       method: 'PUT',
-      signal: controller.signal,
       headers: {
         'Authorization': `Bearer ${KATIB_TOKEN}`,
         'Content-Type': 'application/json',
@@ -67,7 +60,6 @@ async function saveCentralGames(gamesObj) {
         status: 'draft',
       }),
     });
-    clearTimeout(timeoutId);
   } catch (err) {
     console.warn('Central save error:', err.message);
   }
@@ -171,11 +163,8 @@ export default {
         const targetPath = url.pathname.replace(/^\/api/, '');
         const backendUrl = `${KATIB_BASE}${targetPath}${url.search}`;
         const clonedReq = request.clone();
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
         const fwdRes = await fetch(backendUrl, {
           method: request.method,
-          signal: controller.signal,
           headers: {
             'Authorization': `Bearer ${KATIB_TOKEN}`,
             'Content-Type': request.headers.get('Content-Type') || 'application/json',
@@ -183,7 +172,6 @@ export default {
           },
           body: ['POST', 'PUT', 'PATCH'].includes(request.method) ? await clonedReq.text() : undefined,
         });
-        clearTimeout(timeoutId);
 
         if (fwdRes.ok) {
           const resText = await fwdRes.text();
