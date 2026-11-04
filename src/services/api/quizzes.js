@@ -201,56 +201,30 @@ export const getQuizzes = async (params = {}) => {
     endpoint = `/table/course_quiz/${params.courseId}/${page}${query}`;
   }
 
-  let response = null;
+  let response;
   try {
     response = await lmsClient.get(endpoint);
   } catch (err) {
     // If yahoot_quiz endpoint is unavailable, gracefully try course_quiz or fallback
     if (!endpoint.includes('/table/course_quiz')) {
-      try {
-        const fallbackCourseId = params.courseId ?? DEFAULT_COURSE_ID;
-        response = await lmsClient.get(`/table/course_quiz/${fallbackCourseId}/${page}${query}`);
-      } catch (innerErr) {
-        console.warn('LMS API offline, using mockStore fallback:', innerErr?.message || innerErr);
-      }
+      const fallbackCourseId = params.courseId ?? DEFAULT_COURSE_ID;
+      response = await lmsClient.get(`/table/course_quiz/${fallbackCourseId}/${page}${query}`);
     } else {
-      console.warn('LMS API offline, using mockStore fallback:', err?.message || err);
+      throw err;
     }
   }
 
-  if (response && response.tableData) {
-    const rawList = response.tableData || [];
-    const transformedList = rawList
-      .filter(item => !String(item.title || '').startsWith('__YAHOOT_'))
-      .map(item => transformLmsQuizToApp(item))
-      // Di branch main: hilangkan kuis dari LMS/kursus (hanya kuis mandiri)
-      ;
-
-    if (params.returnFullResponse) {
-      return {
-        tableData: transformedList,
-        totalRecords: response.totalRecords ?? transformedList.length,
-        totalPages: response.totalPages ?? 1,
-        currentPage: response.currentPage ?? page,
-      };
-    }
-
-    return transformedList;
-  }
-
-  // Graceful Fallback: Ambil data kuis asli dari mockStore
-  const mockList = mockStore.getQuizzes();
-  const transformedList = (mockList || [])
+  const rawList = response.tableData || [];
+  const transformedList = rawList
     .filter(item => !String(item.title || '').startsWith('__YAHOOT_'))
-    // Di branch main: hilangkan kuis dari LMS/kursus (hanya kuis mandiri)
-    ;
+    .map(item => transformLmsQuizToApp(item));
 
   if (params.returnFullResponse) {
     return {
       tableData: transformedList,
-      totalRecords: transformedList.length,
-      totalPages: 1,
-      currentPage: 1,
+      totalRecords: response.totalRecords ?? transformedList.length,
+      totalPages: response.totalPages ?? 1,
+      currentPage: response.currentPage ?? page,
     };
   }
 
@@ -263,35 +237,22 @@ export const getQuizzes = async (params = {}) => {
  */
 export const getQuiz = async (quizId) => {
   const cacheBuster = `_t=${Date.now()}`;
-  let response = null;
+  let response;
   try {
     response = await lmsClient.get(`/detail/yahoot_quiz/${quizId}?${cacheBuster}`, {
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
     });
   } catch {
-    try {
-      // Alias fallback: /detail/course_quiz/:quiz_id
-      response = await lmsClient.get(`/detail/course_quiz/${quizId}?${cacheBuster}`, {
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
-      });
-    } catch {
-      console.warn(`LMS API detail offline for quiz #${quizId}, using mockStore`);
-    }
+    // Alias fallback: /detail/course_quiz/:quiz_id
+    response = await lmsClient.get(`/detail/course_quiz/${quizId}?${cacheBuster}`, {
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+    });
   }
 
-  if (response) {
-    const quizData = response.data?.quiz || response.quiz || response.data || {};
-    const questionsData = response.data?.questions || response.questions || [];
-    return transformLmsQuizToApp(quizData, questionsData);
-  }
+  const quizData = response.data?.quiz || response.quiz || response.data || {};
+  const questionsData = response.data?.questions || response.questions || [];
 
-  // Fallback to mockStore
-  const localQuiz = mockStore.getQuiz(quizId);
-  if (localQuiz) {
-    return localQuiz;
-  }
-
-  throw new ApiError('Kuis tidak ditemukan', 'QUIZ_NOT_FOUND', 404);
+  return transformLmsQuizToApp(quizData, questionsData);
 };
 
 /**
