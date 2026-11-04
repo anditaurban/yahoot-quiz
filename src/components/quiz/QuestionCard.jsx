@@ -7,6 +7,7 @@ export const QuestionCard = ({
   currentIndex = 0,
   totalQuestions = 1,
   timeLimit = 20,
+  remainingSeconds = null,
   showTimer = true,
   timerRunning = true,
   onTimeUp,
@@ -36,6 +37,7 @@ export const QuestionCard = ({
         <div className="bg-white/80 backdrop-blur-sm border-2 border-slate-900 rounded-block p-2 sm:p-2.5 shadow-block-xs">
           <Timer
             duration={timeLimit}
+            initialTimeLeft={remainingSeconds}
             isRunning={timerRunning}
             onTimeUp={onTimeUp}
             resetKey={currentIndex}

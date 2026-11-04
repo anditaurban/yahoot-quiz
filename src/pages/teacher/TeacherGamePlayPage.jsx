@@ -505,6 +505,7 @@ export const TeacherGamePlayPage = () => {
               currentIndex={question.index}
               totalQuestions={game?.totalQuestions || 1}
               timeLimit={question.timeLimit}
+              remainingSeconds={question.remainingSeconds}
               type={question.type}
               timerRunning={timerRunning}
               onTimeUp={() => {

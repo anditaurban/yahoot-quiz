@@ -3,6 +3,7 @@ import { Clock } from 'lucide-react';
 
 export const Timer = ({
   duration = 20,
+  initialTimeLeft = null,
   isRunning = true,
   onTimeUp,
   resetKey = null,
@@ -10,14 +11,21 @@ export const Timer = ({
   className = '',
 }) => {
   const safeDuration = Math.max(5, Number(duration) || 20);
-  const [timeLeft, setTimeLeft] = useState(safeDuration);
+  const getInitialTime = () => {
+    if (initialTimeLeft !== null && initialTimeLeft !== undefined) {
+      return Math.max(0, Math.min(safeDuration, Number(initialTimeLeft)));
+    }
+    return safeDuration;
+  };
+
+  const [timeLeft, setTimeLeft] = useState(getInitialTime);
   const onTimeUpCalledRef = useRef(false);
 
-  // Reset timer whenever duration or resetKey (new question) changes
+  // Reset timer whenever duration, resetKey (new question), or initialTimeLeft changes
   useEffect(() => {
-    setTimeLeft(safeDuration);
+    setTimeLeft(getInitialTime());
     onTimeUpCalledRef.current = false;
-  }, [safeDuration, resetKey]);
+  }, [safeDuration, resetKey, initialTimeLeft]);
 
   useEffect(() => {
     if (!isRunning) return;

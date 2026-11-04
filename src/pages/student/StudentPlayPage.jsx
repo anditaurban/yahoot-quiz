@@ -243,6 +243,7 @@ export const StudentPlayPage = () => {
           currentIndex={question.index}
           totalQuestions={question.totalQuestions}
           timeLimit={question.timeLimit}
+          remainingSeconds={question.remainingSeconds}
           type={question.type}
           timerRunning={gameState === 'answering'}
           onTimeUp={handleTimeUp}
