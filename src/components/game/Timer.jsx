@@ -5,20 +5,24 @@ export const Timer = ({
   duration = 20,
   isRunning = true,
   onTimeUp,
+  resetKey = null,
   size = 'md', // 'sm' | 'md' | 'lg'
   className = '',
 }) => {
-  const [timeLeft, setTimeLeft] = useState(duration);
+  const safeDuration = Math.max(5, Number(duration) || 20);
+  const [timeLeft, setTimeLeft] = useState(safeDuration);
   const onTimeUpCalledRef = useRef(false);
 
+  // Reset timer whenever duration or resetKey (new question) changes
   useEffect(() => {
-    setTimeLeft(duration);
+    setTimeLeft(safeDuration);
     onTimeUpCalledRef.current = false;
-  }, [duration]);
+  }, [safeDuration, resetKey]);
 
   useEffect(() => {
     if (!isRunning) return;
 
+    // Never trigger onTimeUp immediately on initial render if safeDuration is valid
     if (timeLeft <= 0) {
       if (!onTimeUpCalledRef.current) {
         onTimeUpCalledRef.current = true;
@@ -42,7 +46,7 @@ export const Timer = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft, onTimeUp]);
+  }, [isRunning, timeLeft, onTimeUp, safeDuration]);
 
   const percentage = Math.max(0, Math.min(100, (timeLeft / duration) * 100));
   const isUrgent = timeLeft <= 5 && timeLeft > 0;

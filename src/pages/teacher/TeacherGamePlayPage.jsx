@@ -240,11 +240,18 @@ export const TeacherGamePlayPage = () => {
           setLeaderboard(res.players);
         }
 
+        const totalP = (gameData?.players && gameData.players.length > 0) ? gameData.players.length : (res?.players?.length || 0);
+        const totalAns = stats?.totalAnswers || 0;
+        const isCurrentQuestion = qData.index !== undefined && qData.index === currentQuestionIndexRef.current;
+
         // Server authoritative auto-reveal or all players answered
-        if (qData.gameStatus === 'feedback' && roundPhaseRef.current === 'question') {
-          transitionToReveal();
-        } else if (!justAdvancedRef.current && roundPhaseRef.current === 'question' && isCurrentQuestion && totalP > 0 && totalAns > 0 && totalAns >= totalP) {
-          transitionToReveal();
+        // Guarded: never trigger during cool-down after advancing or when no answers submitted yet
+        if (!justAdvancedRef.current && roundPhaseRef.current === 'question' && isCurrentQuestion) {
+          if (qData.gameStatus === 'feedback') {
+            transitionToReveal();
+          } else if (totalP > 0 && totalAns > 0 && totalAns >= totalP) {
+            transitionToReveal();
+          }
         }
       } catch (err) {
         if (!isMounted) return;
@@ -322,6 +329,10 @@ export const TeacherGamePlayPage = () => {
     setAdvancing(true);
     setError('');
     setShowAllLeaderboard(false);
+    justAdvancedRef.current = true; // Guard immediately while advancing
+    setTimeout(() => {
+      justAdvancedRef.current = false;
+    }, 3000);
     try {
       const res = await nextQuestion(id);
 
@@ -391,16 +402,17 @@ export const TeacherGamePlayPage = () => {
 
   const isLastQuestion = question.index + 1 >= (game?.totalQuestions || 1);
   const totalPlayers = (game?.players && game.players.length > 0) ? game.players.length : (leaderboard.length || 0);
+  const overallPercent = totalPlayers > 0 ? Math.min(100, Math.round(((answerStats.totalAnswers || 0) / totalPlayers) * 100)) : 0;
   const top3 = leaderboard.slice(0, 3);
   const restPlayers = leaderboard.slice(3);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] game-grid-pattern py-6 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] overflow-hidden game-grid-pattern p-2 sm:p-4 flex flex-col justify-between max-w-5xl mx-auto">
+      <div className="flex-1 flex flex-col justify-between min-h-0 space-y-2">
         {/* Top Header / Control Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <span className="font-display font-black text-xs sm:text-sm bg-white border-2 border-slate-900 px-3 py-1 rounded-block shadow-block-sm">
+            <span className="font-display font-black text-xs sm:text-sm bg-white border-2 border-slate-900 px-3 py-0.5 rounded-block shadow-block-xs">
               PIN: {game?.code}
             </span>
             <span className="font-mono text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded hidden sm:inline">
@@ -415,19 +427,19 @@ export const TeacherGamePlayPage = () => {
             {/* Sound Toggle Button */}
             <Button
               variant={isPlayingSound ? 'warning' : 'secondary'}
-              size="md"
+              size="sm"
               onClick={toggleSound}
               title={isPlayingSound ? 'Jeda Musik SpongeBob' : 'Putar Musik SpongeBob'}
               className="flex items-center gap-1.5"
             >
               {isPlayingSound ? (
                 <>
-                  <Volume2 className="w-4 h-4 text-slate-950 animate-pulse" />
+                  <Volume2 className="w-3.5 h-3.5 text-slate-950 animate-pulse" />
                   <span>Musik On 🎵</span>
                 </>
               ) : (
                 <>
-                  <VolumeX className="w-4 h-4 text-slate-600" />
+                  <VolumeX className="w-3.5 h-3.5 text-slate-600" />
                   <span>Musik Off</span>
                 </>
               )}
@@ -437,11 +449,11 @@ export const TeacherGamePlayPage = () => {
             {roundPhase === 'question' && (
               <Button
                 variant="warning"
-                size="md"
+                size="sm"
                 onClick={transitionToReveal}
                 className="flex items-center gap-1.5"
               >
-                <Eye className="w-4 h-4" />
+                <Eye className="w-3.5 h-3.5" />
                 <span>Kunci Jawaban</span>
               </Button>
             )}
@@ -449,26 +461,26 @@ export const TeacherGamePlayPage = () => {
             {roundPhase === 'reveal' && (
               <Button
                 variant="primary"
-                size="md"
+                size="sm"
                 onClick={transitionToLeaderboard}
-                className="flex items-center gap-1.5 bg-indigo-600 text-white border-2 border-slate-900 shadow-block"
+                className="flex items-center gap-1.5 bg-indigo-600 text-white border-2 border-slate-900 shadow-block-xs"
               >
-                <Trophy className="w-4 h-4 text-amber-300" />
+                <Trophy className="w-3.5 h-3.5 text-amber-300" />
                 <span>Lihat Klasemen</span>
-                <ArrowRight className="w-4 h-4 stroke-[3]" />
+                <ArrowRight className="w-3.5 h-3.5 stroke-[3]" />
               </Button>
             )}
 
             {roundPhase === 'leaderboard' && (
               <Button
                 variant="primary"
-                size="md"
+                size="sm"
                 loading={advancing}
                 onClick={handleNext}
-                className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black border-2 border-slate-900 shadow-block"
+                className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black border-2 border-slate-900 shadow-block-xs"
               >
                 <span>{isLastQuestion ? 'Lihat Hasil Akhir' : 'Soal Berikutnya'}</span>
-                <ArrowRight className="w-4 h-4 stroke-[3]" />
+                <ArrowRight className="w-3.5 h-3.5 stroke-[3]" />
               </Button>
             )}
           </div>
@@ -476,7 +488,7 @@ export const TeacherGamePlayPage = () => {
 
         {/* Global Error */}
         {error && (
-          <div className="p-3 bg-red-100 border-2 border-red-500 rounded-block text-red-800 text-xs font-bold">
+          <div className="p-2 bg-red-100 border-2 border-red-500 rounded-block text-red-800 text-xs font-bold shrink-0">
             {error}
           </div>
         )}
@@ -485,7 +497,7 @@ export const TeacherGamePlayPage = () => {
             TAHAP 1 & 2: SOAL & PEMBAHASAN JAWABAN BENAR
            ======================================================== */}
         {(roundPhase === 'question' || roundPhase === 'reveal') && (
-          <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="flex-1 flex flex-col justify-between min-h-0 space-y-2 animate-in fade-in duration-200">
             {/* Question Card with Timer */}
             <QuestionCard
               key={`q_${question.index}_${question.id}`}
@@ -501,37 +513,41 @@ export const TeacherGamePlayPage = () => {
                 }
               }}
               showTimer={roundPhase === 'question'}
+              className="shrink-0"
             />
 
-            {/* Live Answer Status Tracker */}
-            <div className="flex items-center justify-between p-3.5 bg-white border-2 border-slate-900 rounded-block shadow-block">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 text-indigo-900 border border-slate-900 rounded-md">
-                  <Users className="w-4 h-4 stroke-[2.5]" />
+            {/* Overall Class Participation Progress Bar Underneath Question */}
+            <div className="p-2 sm:p-2.5 bg-white border-2 border-slate-900 rounded-block shadow-block-xs shrink-0">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-1">
+                <div className="flex items-center gap-1.5 font-display font-black">
+                  <Users className="w-3.5 h-3.5 text-indigo-600 stroke-[2.5]" />
+                  <span>Progres Murid Menjawab:</span>
                 </div>
-                <span className="font-display font-bold text-sm text-slate-900">
-                  Respons Murid:
-                </span>
-                <span className="font-display font-black text-sm bg-amber-300 border border-slate-900 px-2 py-0.5 rounded">
-                  {answerStats.totalAnswers || 0} / {totalPlayers} Terjawab
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-display font-black text-slate-950">
+                    {answerStats.totalAnswers || 0} / {totalPlayers} Murid
+                  </span>
+                  <span className="font-mono text-[11px] font-bold text-slate-500">
+                    ({overallPercent}%)
+                  </span>
+                </div>
               </div>
-
-              <span className="text-xs font-bold text-slate-700">
-                {roundPhase === 'reveal'
-                  ? '🎉 Kunci Jawaban Ditampilkan'
-                  : '⏳ Kuis Sedang Berjalan (Alur Kompetitif)'}
-              </span>
+              <div className="w-full h-2.5 bg-slate-200 border border-slate-900 rounded-full overflow-hidden p-0.5">
+                <div
+                  className="h-full rounded-full bg-indigo-600 transition-all duration-500 ease-out"
+                  style={{ width: `${overallPercent}%` }}
+                />
+              </div>
             </div>
 
             {/* Options Breakdown Grid with Matching Student Colors */}
             {question.type === 'short_answer' ? (
               <div
-                className={`p-6 border-3 border-slate-900 rounded-block shadow-block transition-all ${
+                className={`flex-1 min-h-0 p-4 border-3 border-slate-900 rounded-block shadow-block transition-all flex flex-col justify-center ${
                   roundPhase === 'reveal' ? 'bg-emerald-100 ring-4 ring-emerald-500' : 'bg-white'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <Badge variant="warning" size="md">
                     TIPE KETIK (Isian Singkat)
                   </Badge>
@@ -545,33 +561,21 @@ export const TeacherGamePlayPage = () => {
                 <p className="text-xs uppercase font-bold text-slate-500 tracking-wide mb-1">
                   Kunci Jawaban yang Diharapkan:
                 </p>
-                <p className="font-display font-black text-2xl sm:text-3xl text-slate-950 break-words">
+                <p className="font-display font-black text-xl sm:text-2xl text-slate-950 break-words">
                   {roundPhase === 'reveal'
                     ? `"${question.correctOptionId || question.correct_answer}"`
                     : '•••••••••••• (Tersembunyi)'}
                 </p>
-                <p className="text-xs text-slate-600 mt-2 font-medium">
+                <p className="text-xs text-slate-600 mt-1 font-medium">
                   Siswa menjawab langsung dengan mengetik teks di gawai mereka dan dicocokkan secara case-insensitive.
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-black text-sm sm:text-base text-slate-900">
-                    {roundPhase === 'reveal' ? 'Distribusi Jawaban & Kunci:' : 'Pilihan Jawaban:'}
-                  </h3>
-                  <span className="text-xs font-bold text-slate-600">
-                    {roundPhase === 'reveal' ? 'Hasil Akhir Ronde Ini' : 'Warna Seragam Murid'}
-                  </span>
-                </div>
-
-                {/* 2x2 Grid of Colored Options Matching Student UI */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex-1 min-h-0 flex flex-col justify-between">
+                {/* 2x2 Grid of Colored Options - Clean Without Per-Option Progress Bar to Prevent Cheating */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 flex-1 min-h-0 content-stretch">
                   {(question.options || []).map((opt, idx) => {
                     const isCorrect = String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase();
-                    const counts = answerStats?.optionCounts || {};
-                    const count = counts[opt.id] ?? counts[String(opt.id).toLowerCase()] ?? 0;
-                    const percentage = totalPlayers > 0 ? Math.round((count / totalPlayers) * 100) : 0;
 
                     let optTheme = TEACHER_OPTION_STYLES[idx % TEACHER_OPTION_STYLES.length];
                     if (question.type === 'true_false') {
@@ -581,7 +585,6 @@ export const TeacherGamePlayPage = () => {
                           bg: 'bg-emerald-500 text-slate-950',
                           badge: 'bg-emerald-700 text-white',
                           ring: 'ring-4 ring-white ring-offset-2',
-                          progressBg: 'bg-slate-900',
                         };
                       } else {
                         optTheme = {
@@ -589,7 +592,6 @@ export const TeacherGamePlayPage = () => {
                           bg: 'bg-red-500 text-white',
                           badge: 'bg-red-700 text-white',
                           ring: 'ring-4 ring-emerald-300 ring-offset-2',
-                          progressBg: 'bg-white',
                         };
                       }
                     }
@@ -599,47 +601,29 @@ export const TeacherGamePlayPage = () => {
                     return (
                       <div
                         key={opt.id}
-                        className={`p-4 sm:p-5 border-3 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
+                        className={`h-full min-h-0 p-2.5 sm:p-3.5 border-3 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
                           optTheme.bg
                         } ${
                           roundPhase === 'reveal' && isCorrect
-                            ? `${optTheme.ring} scale-[1.02] shadow-block-lg`
+                            ? `${optTheme.ring} scale-[1.01] shadow-block-lg`
                             : ''
                         } ${isDimmed ? 'opacity-50 grayscale-[25%]' : ''}`}
                       >
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <span className="font-display font-black text-sm px-2.5 py-1 bg-black/25 border-2 border-black/30 rounded-block shadow-sm">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <span className="font-display font-black text-xs sm:text-sm px-2 py-0.5 bg-black/25 border border-black/30 rounded shadow-sm">
                             {optTheme.symbol}
                           </span>
 
-                          {roundPhase === 'reveal' && isCorrect ? (
+                          {roundPhase === 'reveal' && isCorrect && (
                             <Badge variant="success" size="sm" className="font-black bg-white text-emerald-800 border-2 border-slate-900 shadow-block-xs">
                               KUNCI BENAR ✓
                             </Badge>
-                          ) : (
-                            <span className="font-display font-black text-xs px-2 py-0.5 bg-black/20 rounded">
-                              {percentage}%
-                            </span>
                           )}
                         </div>
 
-                        <p className="font-display font-bold text-base sm:text-xl mb-4 break-words leading-snug">
+                        <p className="font-display font-bold text-sm sm:text-base md:text-lg break-words leading-snug my-auto">
                           {opt.text}
                         </p>
-
-                        {/* Response Percentage Bar */}
-                        <div className="pt-2 border-t-2 border-black/15 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-bold">
-                            <span>{count} / {totalPlayers} Murid</span>
-                            <span className="font-display font-black text-sm">{percentage}%</span>
-                          </div>
-                          <div className="w-full h-3 bg-black/20 border-2 border-black/30 rounded-full overflow-hidden p-0.5">
-                            <div
-                              className={`h-full rounded-full transition-all duration-700 ${optTheme.progressBg}`}
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
                       </div>
                     );
                   })}
@@ -649,16 +633,16 @@ export const TeacherGamePlayPage = () => {
 
             {/* Action to proceed to Leaderboard */}
             {roundPhase === 'reveal' && (
-              <div className="text-center pt-2">
+              <div className="text-center pt-1 shrink-0">
                 <Button
                   variant="primary"
-                  size="lg"
+                  size="md"
                   onClick={transitionToLeaderboard}
-                  className="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-display font-black text-base border-3 border-slate-900 shadow-block flex items-center justify-center gap-2 mx-auto"
+                  className="w-full sm:w-auto px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-display font-black text-sm sm:text-base border-3 border-slate-900 shadow-block flex items-center justify-center gap-2 mx-auto"
                 >
-                  <Trophy className="w-5 h-5 text-amber-300" />
+                  <Trophy className="w-4 h-4 text-amber-300" />
                   <span>Lanjutkan ke Klasemen Sementara</span>
-                  <ArrowRight className="w-5 h-5 stroke-[3]" />
+                  <ArrowRight className="w-4 h-4 stroke-[3]" />
                 </Button>
               </div>
             )}
@@ -669,7 +653,7 @@ export const TeacherGamePlayPage = () => {
             TAHAP 3: KLASEMEN SEMENTARA (FULL FOCUS LEADERBOARD)
            ======================================================== */}
         {roundPhase === 'leaderboard' && (
-          <Card className="bg-white border-3 border-slate-900 shadow-block-xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+          <Card className="flex-1 min-h-0 bg-white border-3 border-slate-900 shadow-block-xl p-4 sm:p-6 space-y-4 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-3 border-slate-900 pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-amber-400 border-2 border-slate-900 rounded-block shadow-block-xs">

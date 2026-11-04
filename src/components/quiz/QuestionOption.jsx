@@ -85,7 +85,7 @@ export const QuestionOption = ({
       type="button"
       disabled={isLocked}
       onClick={() => onClick && onClick(option.id)}
-      className={`w-full min-h-[72px] sm:min-h-[84px] p-4 sm:p-5 flex items-center gap-3.5 border-3 border-slate-900 rounded-block shadow-block transition-all duration-100 select-none text-left focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 ${
+      className={`w-full min-h-[50px] sm:min-h-[64px] h-full p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-3.5 border-3 border-slate-900 rounded-block shadow-block transition-all duration-100 select-none text-left focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 ${
         style.bg
       } ${
         !isLocked ? `${style.hover} cursor-pointer active:translate-y-0.5 active:shadow-block-sm` : 'cursor-default'
@@ -93,12 +93,12 @@ export const QuestionOption = ({
       aria-pressed={isSelected}
     >
       {/* Geometric Shape Icon */}
-      <span className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 bg-black/20 border-2 border-slate-900/40 rounded-block flex items-center justify-center font-display font-black text-xl sm:text-2xl">
+      <span className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 bg-black/20 border-2 border-slate-900/40 rounded-block flex items-center justify-center font-display font-black text-lg sm:text-xl">
         {style.symbol}
       </span>
 
       {/* Option Text */}
-      <span className="flex-1 min-w-0 font-display font-bold text-base sm:text-lg md:text-xl leading-snug break-words">
+      <span className="flex-1 min-w-0 font-display font-bold text-sm sm:text-base md:text-lg leading-snug break-words">
         {option.text}
       </span>
 

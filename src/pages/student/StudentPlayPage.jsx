@@ -95,12 +95,6 @@ export const StudentPlayPage = () => {
         } else if (qData.gameStatus === 'feedback') {
           // If teacher opened feedback / results for this question
           setGameState('result');
-        } else if (qData.gameStatus === 'question' && (gameState === 'result' || gameState === 'time-expired')) {
-          // If server is actively on a question but student was stuck on result/time-expired, recover immediately!
-          setSelectedOptionId(null);
-          setTypedAnswer('');
-          setAnswerFeedback(null);
-          setGameState('answering');
         }
 
         // Update player score from results endpoint
@@ -182,10 +176,15 @@ export const StudentPlayPage = () => {
     }
   };
 
+  // Handle timer running out
   const handleTimeUp = () => {
-    if (gameState === 'answering') {
-      setGameState('time-expired');
+    // Wall-clock check: prevent premature expiration if not enough time has elapsed
+    const elapsed = (Date.now() - startTimeRef.current) / 1000;
+    const currentLimit = Number(question?.timeLimit) || 20;
+    if (elapsed < currentLimit - 1.5) {
+      return;
     }
+    setGameState((prev) => (prev === 'answering' ? 'time-expired' : prev));
   };
 
   if (loading && !question) {
@@ -215,17 +214,17 @@ export const StudentPlayPage = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] game-grid-pattern py-4 sm:py-6 px-3 sm:px-6 flex flex-col justify-between max-w-4xl mx-auto">
+    <div className="h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] overflow-hidden game-grid-pattern py-2 sm:py-3 px-3 sm:px-6 flex flex-col justify-between max-w-4xl mx-auto">
       {/* Top Header info */}
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="font-display font-black text-xs sm:text-sm bg-white border-2 border-slate-900 px-2.5 py-1 rounded-block shadow-block-sm truncate max-w-[120px] sm:max-w-[180px]">
+          <span className="font-display font-black text-xs sm:text-sm bg-white border-2 border-slate-900 px-2.5 py-0.5 rounded-block shadow-block-xs truncate max-w-[120px] sm:max-w-[180px]">
             {playerSession?.nickname}
           </span>
-          <span className="font-display font-bold text-xs text-amber-900 bg-amber-100 border-2 border-slate-900 px-2.5 py-1 rounded-block shadow-block-sm shrink-0 whitespace-nowrap">
+          <span className="font-display font-bold text-xs text-amber-900 bg-amber-100 border-2 border-slate-900 px-2.5 py-0.5 rounded-block shadow-block-xs shrink-0 whitespace-nowrap">
             {playerStats.score} Poin
           </span>
-          <span className="font-display font-bold text-xs text-rose-900 bg-rose-100 border-2 border-slate-900 px-2.5 py-1 rounded-block shadow-block-sm shrink-0 whitespace-nowrap hidden sm:inline-flex items-center gap-1">
+          <span className="font-display font-bold text-xs text-rose-900 bg-rose-100 border-2 border-slate-900 px-2.5 py-0.5 rounded-block shadow-block-xs shrink-0 whitespace-nowrap hidden sm:inline-flex items-center gap-1">
             <Flame className="w-3.5 h-3.5 text-rose-600 fill-rose-500" />
             {playerStats.streak}x Beruntun
           </span>
@@ -248,7 +247,7 @@ export const StudentPlayPage = () => {
           timerRunning={gameState === 'answering'}
           onTimeUp={handleTimeUp}
           showTimer={gameState === 'answering'}
-          className="mb-4 sm:mb-6"
+          className="mb-1.5 sm:mb-2 shrink-0"
         />
       )}
 
@@ -262,10 +261,10 @@ export const StudentPlayPage = () => {
                 handleSelectOption(typedAnswer.trim());
               }
             }}
-            className="my-auto max-w-lg mx-auto w-full space-y-4"
+            className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full space-y-3 min-h-0 py-2"
           >
-            <Card className="bg-white border-3 shadow-block-lg p-5">
-              <label className="block font-display font-black text-base text-slate-950 mb-2">
+            <Card className="bg-white border-3 shadow-block-md p-4">
+              <label className="block font-display font-black text-sm sm:text-base text-slate-950 mb-1.5">
                 Ketik Jawaban Kamu:
               </label>
               <input
@@ -274,9 +273,9 @@ export const StudentPlayPage = () => {
                 value={typedAnswer}
                 onChange={(e) => setTypedAnswer(e.target.value)}
                 placeholder="Tulis jawaban di sini..."
-                className="w-full min-h-[50px] px-4 py-2.5 text-base sm:text-lg font-bold border-2 border-slate-900 rounded-block focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full min-h-[44px] px-3.5 py-2 text-base sm:text-lg font-bold border-2 border-slate-900 rounded-block focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
-              <p className="text-xs text-slate-500 font-semibold mt-2">
+              <p className="text-[11px] text-slate-500 font-semibold mt-1.5">
                 Tekan Enter atau klik tombol di bawah untuk mengirim.
               </p>
             </Card>
@@ -284,7 +283,7 @@ export const StudentPlayPage = () => {
             <Button
               type="submit"
               variant="primary"
-              size="lg"
+              size="md"
               fullWidth
               disabled={!typedAnswer.trim()}
               className="flex items-center justify-center gap-2"
@@ -294,7 +293,7 @@ export const StudentPlayPage = () => {
             </Button>
           </form>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 my-auto">
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 py-1 sm:py-2 min-h-0 content-stretch">
             {question.options.map((opt, idx) => (
               <QuestionOption
                 key={opt.id}
@@ -423,8 +422,8 @@ export const StudentPlayPage = () => {
       )}
 
       {/* Bottom spacer / status */}
-      <div className="mt-4 text-center">
-        <span className="text-[11px] font-bold text-slate-500">
+      <div className="mt-1 text-center shrink-0">
+        <span className="text-[10px] font-bold text-slate-400">
           Yahoot! Mobile Student Experience
         </span>
       </div>

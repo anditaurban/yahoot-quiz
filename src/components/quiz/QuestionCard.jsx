@@ -14,9 +14,9 @@ export const QuestionCard = ({
   className = '',
 }) => {
   return (
-    <div className={`w-full max-w-3xl mx-auto space-y-3 ${className}`}>
+    <div className={`w-full max-w-3xl mx-auto space-y-2 sm:space-y-2.5 ${className}`}>
       {/* Top Meta Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <Badge variant="primary" size="md">
             Soal {currentIndex + 1} dari {totalQuestions}
@@ -33,18 +33,19 @@ export const QuestionCard = ({
 
       {/* Prominent Timer with Seconds & Progress Bar */}
       {showTimer && (
-        <div className="bg-white/80 backdrop-blur-sm border-2 border-slate-900 rounded-block p-2.5 sm:p-3 shadow-block-xs">
+        <div className="bg-white/80 backdrop-blur-sm border-2 border-slate-900 rounded-block p-2 sm:p-2.5 shadow-block-xs">
           <Timer
             duration={timeLimit}
             isRunning={timerRunning}
             onTimeUp={onTimeUp}
+            resetKey={currentIndex}
           />
         </div>
       )}
 
       {/* Main Question Display */}
-      <div className="p-5 sm:p-8 bg-white border-3 border-slate-900 rounded-block shadow-block-lg text-center min-h-[120px] sm:min-h-[140px] flex items-center justify-center">
-        <h2 className="font-display font-black text-lg sm:text-2xl md:text-3xl text-slate-950 leading-snug break-words max-w-full">
+      <div className="p-3 sm:p-5 bg-white border-3 border-slate-900 rounded-block shadow-block-md text-center min-h-[72px] sm:min-h-[88px] flex items-center justify-center">
+        <h2 className="font-display font-black text-base sm:text-xl md:text-2xl text-slate-950 leading-snug break-words max-w-full">
           {question}
         </h2>
       </div>
