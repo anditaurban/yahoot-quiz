@@ -33,10 +33,30 @@ export const transformLmsQuestionToApp = (q) => {
     // Tipe KETIK (Isian / Jawaban Singkat)
     type = 'short_answer';
   } else if (
-    options.length === 2 &&
-    (options.some(o => /^(true|benar)$/i.test(o.text)) || options.some(o => /^(false|salah)$/i.test(o.text)))
+    q.question_type === 'true_false' ||
+    q.type === 'true_false' ||
+    (options.length === 2 &&
+      (options.some(o => /^(true|benar)$/i.test(o.text)) ||
+       options.some(o => /^(false|salah)$/i.test(o.text)) ||
+       (!hasOptC && !hasOptD)))
   ) {
     type = 'true_false';
+  }
+
+  // Standarisasi True / False: Opsi A = TRUE, Opsi B = FALSE
+  if (type === 'true_false') {
+    if (options[0]) {
+      options[0].id = 'a';
+      if (!options[0].text || options[0].text.trim() === '') {
+        options[0].text = 'Benar / True';
+      }
+    }
+    if (options[1]) {
+      options[1].id = 'b';
+      if (!options[1].text || options[1].text.trim() === '') {
+        options[1].text = 'Salah / False';
+      }
+    }
   }
 
   const qId = q.question_id || q.id;
@@ -65,7 +85,11 @@ export const transformLmsQuestionToApp = (q) => {
     question: q.question_text || q.question || '',
     question_text: q.question_text || q.question || '',
     options,
-    correctOptionId: type === 'short_answer' ? rawCorrect : lowerCorrect,
+    correctOptionId: type === 'short_answer' ? rawCorrect : (
+      type === 'true_false'
+        ? (/^(a|true|benar)$/i.test(lowerCorrect) ? 'a' : /^(b|false|salah)$/i.test(lowerCorrect) ? 'b' : lowerCorrect)
+        : lowerCorrect
+    ),
     correct_answer: rawCorrect,
     order_index: q.order_index ?? 0,
     timeLimit: resolvedTimeLimit,

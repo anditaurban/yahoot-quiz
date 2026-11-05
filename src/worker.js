@@ -486,7 +486,14 @@ async function handleGameApi(request, url) {
     }
 
     const expected = String(currentQ.correctOptionId || currentQ.correct_answer || '').trim();
-    const isCorrect = rawAnswer.toLowerCase() === expected.toLowerCase();
+    let isCorrect = rawAnswer.toLowerCase() === expected.toLowerCase();
+    const isExpectedTrue = /^(a|true|benar)$/i.test(expected);
+    const isExpectedFalse = /^(b|false|salah)$/i.test(expected);
+    const isAnswerTrue = /^(a|true|benar)$/i.test(rawAnswer);
+    const isAnswerFalse = /^(b|false|salah)$/i.test(rawAnswer);
+    if ((isExpectedTrue || isExpectedFalse) && (isAnswerTrue || isAnswerFalse)) {
+      isCorrect = (isExpectedTrue && isAnswerTrue) || (isExpectedFalse && isAnswerFalse);
+    }
 
     const timeLimit = Number(currentQ.timeLimit) || 20;
     const elapsedSeconds = Number(responseTimeSeconds) || Math.max(0, (Date.now() - (game.questionStartedAt || Date.now())) / 1000);
