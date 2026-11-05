@@ -3,27 +3,7 @@
 
 import { mockStore } from '../../mocks/mockStore';
 
-// Resolves API Base URL dynamically:
-// - If accessed locally via 'yahoot.test' (Laragon), '*.test', or localhost / 127.0.0.1:
-//   routes directly to Railway LMS API (https://ngodingai-lms-api.up.railway.app)
-//   to bypass Spamhaus local ISP IP blocking on dev.katib.cloud.
-// - Otherwise (production / Cloudflare Workers): uses VITE_API_BASE_URL or defaults to https://dev.katib.cloud.
-export const resolveBaseUrl = () => {
-  if (typeof window !== 'undefined' && window.location) {
-    const hostname = window.location.hostname;
-    if (
-      hostname === 'yahoot.test' ||
-      hostname.endsWith('.test') ||
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1'
-    ) {
-      return 'https://ngodingai-lms-api.up.railway.app';
-    }
-  }
-  return (import.meta.env.VITE_API_BASE_URL || 'https://dev.katib.cloud').replace(/\/$/, '');
-};
-
-const BASE_URL = resolveBaseUrl();
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://dev.katib.cloud').replace(/\/$/, '');
 const AUTH_TOKEN = import.meta.env.VITE_API_TOKEN || 'DpacnJf3uEQeM7HN';
 const MOCK_DELAY = 100;
 
