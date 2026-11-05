@@ -12,5 +12,14 @@
     "VITE_API_TOKEN": "DpacnJf3uEQeM7HN",
     "VITE_DEFAULT_COURSE_ID": "1",
     "VITE_DEFAULT_OWNER_ID": "4409"
-  }
+  },\\
+  \"previews\": {\\
+    \"vars\": {\\
+      \"VITE_API_BASE_URL\": \"https://dev.katib.cloud\",\\
+      \"VITE_API_TOKEN\": \"DpacnJf3uEQeM7HN\",\\
+      \"VITE_DEFAULT_COURSE_ID\": \"1\",\\
+      \"VITE_DEFAULT_OWNER_ID\": \"4409\"\\
+    }\\
+  }\\
 }
+
