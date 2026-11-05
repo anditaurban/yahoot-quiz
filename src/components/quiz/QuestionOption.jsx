@@ -45,12 +45,26 @@ export const QuestionOption = ({
 }) => {
   let style = OPTION_STYLES[index % OPTION_STYLES.length];
 
-  // Specific True/False styling
-  if (type === 'true_false') {
-    if (String(option.id).toLowerCase() === 'true') {
+  // Specific True/False styling: A = TRUE (Hijau/Emerald), B = FALSE (Merah)
+  const isTrueFalse =
+    type === 'true_false' ||
+    String(option.id).toLowerCase() === 'true' ||
+    String(option.id).toLowerCase() === 'false' ||
+    /^(true|benar)$/i.test(option.text) ||
+    /^(false|salah)$/i.test(option.text);
+
+  if (isTrueFalse) {
+    const isTrue =
+      String(option.id).toLowerCase() === 'a' ||
+      String(option.id).toLowerCase() === 'true' ||
+      index === 0 ||
+      /^(true|benar)$/i.test(option.text);
+
+    if (isTrue) {
       style = {
         symbol: '✓',
-        label: 'TRUE',
+        label: 'A',
+        badge: 'BENAR / TRUE',
         bg: 'bg-emerald-500 text-slate-950',
         hover: 'hover:bg-emerald-400',
         selectedRing: 'ring-4 ring-emerald-300',
@@ -58,7 +72,8 @@ export const QuestionOption = ({
     } else {
       style = {
         symbol: '✕',
-        label: 'FALSE',
+        label: 'B',
+        badge: 'SALAH / FALSE',
         bg: 'bg-red-500 text-white',
         hover: 'hover:bg-red-400',
         selectedRing: 'ring-4 ring-red-300',
@@ -98,9 +113,16 @@ export const QuestionOption = ({
       </span>
 
       {/* Option Text */}
-      <span className="flex-1 min-w-0 font-display font-bold text-sm sm:text-base md:text-lg leading-snug break-words">
-        {option.text}
-      </span>
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        {isTrueFalse && (
+          <span className="text-[11px] font-black tracking-wider uppercase opacity-90 block leading-tight">
+            {style.badge} ({style.label})
+          </span>
+        )}
+        <span className="font-display font-black text-base sm:text-lg md:text-xl leading-snug break-words">
+          {option.text}
+        </span>
+      </div>
 
       {/* Selected Indicator / Result Indicator */}
       {showResult ? (

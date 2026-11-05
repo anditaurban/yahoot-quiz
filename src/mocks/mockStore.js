@@ -541,7 +541,14 @@ class MockStore {
 
     const cleanSubmitted = String(optionId || '').trim().toLowerCase();
     const cleanExpected = String(currentQ.correctOptionId || currentQ.correct_answer || '').trim().toLowerCase();
-    const isCorrect = cleanSubmitted === cleanExpected;
+    let isCorrect = cleanSubmitted === cleanExpected;
+    const isExpTrue = /^(a|true|benar)$/i.test(cleanExpected);
+    const isExpFalse = /^(b|false|salah)$/i.test(cleanExpected);
+    const isSubTrue = /^(a|true|benar)$/i.test(cleanSubmitted);
+    const isSubFalse = /^(b|false|salah)$/i.test(cleanSubmitted);
+    if ((isExpTrue || isExpFalse) && (isSubTrue || isSubFalse)) {
+      isCorrect = (isExpTrue && isSubTrue) || (isExpFalse && isSubFalse);
+    }
     let points = 0;
     if (isCorrect) {
       // Speed bonus: max points if fast, min 50% points if near time limit
