@@ -222,6 +222,18 @@ export const StudentPlayPage = () => {
     );
   }
 
+  // Filter valid non-empty options for consistent True/False detection
+  const validOptions = (question?.options || []).filter(
+    (o) => o && o.text !== null && o.text !== undefined && String(o.text).trim() !== ''
+  );
+
+  const isTrueFalseQuestion =
+    question?.type === 'true_false' ||
+    validOptions.length === 2 ||
+    validOptions.some((o) => /^(true|benar)$/i.test(o.text)) ||
+    validOptions.some((o) => /^(false|salah)$/i.test(o.text)) ||
+    (question?.options && question.options.length === 2);
+
   return (
     <div className="min-h-[100dvh] game-grid-pattern py-2 sm:py-3 px-3 sm:px-6 flex flex-col justify-between max-w-2xl mx-auto overflow-y-auto">
       {/* Top Header info */}
@@ -302,19 +314,61 @@ export const StudentPlayPage = () => {
               <Check className="w-5 h-5 stroke-[3]" />
             </Button>
           </form>
-        ) : question.type === 'true_false' || question.options?.length === 2 ? (
-          /* Dedicated 2-Option True / False Layout for Student */
-          <div className="flex-1 flex flex-col sm:grid sm:grid-cols-2 gap-3 py-2 min-h-0 justify-center">
-            {question.options.map((opt, idx) => (
-              <QuestionOption
-                key={opt.id}
-                index={idx}
-                option={opt}
-                type="true_false"
-                onClick={handleSelectOption}
-                keyboardShortcut={String(idx + 1)}
-              />
-            ))}
+        ) : isTrueFalseQuestion ? (
+          /* Dedicated 2-Card True / False Layout for Student - 100% Identik dengan Tampilan Guru */
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 py-2 min-h-0 content-stretch">
+            {validOptions.slice(0, 2).map((opt, idx) => {
+              const isOptionTrue =
+                String(opt.id).toLowerCase() === 'a' ||
+                String(opt.id).toLowerCase() === 'true' ||
+                idx === 0 ||
+                /^(true|benar)$/i.test(opt.text);
+
+              const optTheme = isOptionTrue
+                ? {
+                    symbol: '✓ BENAR (A)',
+                    tag: 'TRUE',
+                    bg: 'bg-emerald-500 text-slate-950',
+                    hover: 'hover:bg-emerald-400 active:bg-emerald-600',
+                    ring: 'ring-4 sm:ring-6 ring-emerald-300 ring-offset-2',
+                  }
+                : {
+                    symbol: '✕ SALAH (B)',
+                    tag: 'FALSE',
+                    bg: 'bg-red-500 text-white',
+                    hover: 'hover:bg-red-400 active:bg-red-600',
+                    ring: 'ring-4 sm:ring-6 ring-red-300 ring-offset-2',
+                  };
+
+              const isSelected = String(selectedOptionId).toLowerCase() === String(opt.id).toLowerCase();
+
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  disabled={gameState !== 'answering'}
+                  onClick={() => handleSelectOption(opt.id)}
+                  className={`w-full h-full min-h-[120px] sm:min-h-[160px] p-4 sm:p-6 border-3 sm:border-4 border-slate-900 rounded-block shadow-block transition-all flex flex-col justify-between text-left select-none cursor-pointer active:translate-y-1 active:shadow-block-sm ${
+                    optTheme.bg
+                  } ${optTheme.hover} ${
+                    isSelected ? `${optTheme.ring} scale-[1.02] shadow-block-lg` : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-2 w-full">
+                    <span className="font-display font-black text-xs sm:text-base px-2.5 py-1 bg-black/25 border border-black/30 rounded-block shadow-sm">
+                      {optTheme.symbol}
+                    </span>
+                    <span className="font-mono font-bold text-xs px-2 py-0.5 bg-black/15 rounded border border-black/20">
+                      [{idx + 1}]
+                    </span>
+                  </div>
+
+                  <p className="font-display font-black text-2xl sm:text-3xl md:text-4xl break-words leading-tight my-auto text-center py-2 w-full">
+                    {opt.text || (isOptionTrue ? 'Benar / True' : 'Salah / False')}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 py-1 sm:py-2 min-h-0 content-stretch">

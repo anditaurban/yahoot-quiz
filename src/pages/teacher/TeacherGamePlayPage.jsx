@@ -130,53 +130,63 @@ export const TeacherGamePlayPage = () => {
     startAudio();
 
     return () => {
-      audio.pause();
-      audio.currentTime = 0;
-      fanfare.pause();
-      fanfare.currentTime = 0;
-      lbAudio.pause();
-      lbAudio.currentTime = 0;
+      stopAllAudios();
     };
   }, []);
 
-  const playFanfare = () => {
+  // Centralized Audio Coordinator: Guarantees strict mutual exclusion (NEVER OVERLAP)
+  const stopAllAudios = () => {
     try {
-      if (fanfareRef.current && isPlayingSoundRef.current) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      if (fanfareRef.current) {
+        fanfareRef.current.pause();
         fanfareRef.current.currentTime = 0;
-        fanfareRef.current.play().catch(() => {});
+      }
+      if (leaderboardAudioRef.current) {
+        leaderboardAudioRef.current.pause();
+        leaderboardAudioRef.current.currentTime = 0;
       }
     } catch {
-      // Audio autoplay restrictions
+      // Audio pause fail safe
     }
   };
 
-  const playLeaderboardSound = () => {
+  const playPhaseAudio = (targetPhase) => {
+    // 1. Matikan dan reset SEMUA audio yang ada terlebih dahulu (Zero audio collision)
+    stopAllAudios();
+
+    // 2. Jika audio di-mute oleh guru, jangan putar apa pun
+    if (!isPlayingSoundRef.current) return;
+
     try {
-      if (leaderboardAudioRef.current && isPlayingSoundRef.current) {
+      if (targetPhase === 'question' && audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      } else if (targetPhase === 'reveal' && fanfareRef.current) {
+        fanfareRef.current.currentTime = 0;
+        fanfareRef.current.play().catch(() => {});
+      } else if (targetPhase === 'leaderboard' && leaderboardAudioRef.current) {
         leaderboardAudioRef.current.currentTime = 0;
         leaderboardAudioRef.current.play().catch(() => {});
       }
     } catch {
-      // Audio autoplay restrictions
+      // Autoplay safety
     }
   };
 
   const toggleSound = () => {
     if (!audioRef.current) return;
     if (isPlayingSound) {
-      audioRef.current.pause();
-      if (fanfareRef.current) fanfareRef.current.pause();
-      if (leaderboardAudioRef.current) leaderboardAudioRef.current.pause();
+      stopAllAudios();
       setIsPlayingSound(false);
       isPlayingSoundRef.current = false;
     } else {
       setIsPlayingSound(true);
       isPlayingSoundRef.current = true;
-      if (roundPhaseRef.current === 'question') {
-        audioRef.current.play().catch(() => {});
-      } else if (roundPhaseRef.current === 'leaderboard' && leaderboardAudioRef.current) {
-        leaderboardAudioRef.current.play().catch(() => {});
-      }
+      playPhaseAudio(roundPhaseRef.current);
     }
   };
 
@@ -224,11 +234,8 @@ export const TeacherGamePlayPage = () => {
           setRoundPhase('question');
           setTimerRunning(true);
           setAnswerStats({ totalAnswers: 0, optionCounts: {} });
-          // Restart SpongeBob sound for new question
-          if (audioRef.current && isPlayingSoundRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(() => {});
-          }
+          // Play Question BGM exclusively for new question
+          playPhaseAudio('question');
         } else {
           setQuestion((prev) => (prev ? { ...prev, ...qData } : qData));
         }
@@ -299,14 +306,8 @@ export const TeacherGamePlayPage = () => {
     setRoundPhase('reveal');
     setTimerRunning(false);
 
-    // Stop SpongeBob sound
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-
-    // Play reveal fanfare SFX!
-    playFanfare();
+    // Stop all BGM immediately and play Reveal Fanfare exclusively
+    playPhaseAudio('reveal');
 
     // Notify backend & student devices to reveal their results
     await setQuestionStatus(id, 'feedback');
@@ -317,20 +318,8 @@ export const TeacherGamePlayPage = () => {
     roundPhaseRef.current = 'leaderboard';
     setRoundPhase('leaderboard');
 
-    // SpongeBob MUST BE OFF during Klasemen Sementara
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-
-    // Stop reveal fanfare if still playing
-    if (fanfareRef.current) {
-      fanfareRef.current.pause();
-      fanfareRef.current.currentTime = 0;
-    }
-
-    // Play distinct Leaderboard Drumroll + Fanfare Jingle!
-    playLeaderboardSound();
+    // Stop fanfare immediately and play Leaderboard Jingle exclusively
+    playPhaseAudio('leaderboard');
   };
 
   // Transition Step 3 -> Step 4: KLASEMEN SEMENTARA -> SOAL BERIKUTNYA
@@ -342,26 +331,15 @@ export const TeacherGamePlayPage = () => {
     setTimeout(() => {
       justAdvancedRef.current = false;
     }, 3000);
+
+    // Stop any playing sound while transitioning
+    stopAllAudios();
+
     try {
       const res = await nextQuestion(id);
 
-      // Stop any lingering leaderboard / fanfare sounds
-      if (fanfareRef.current) {
-        fanfareRef.current.pause();
-        fanfareRef.current.currentTime = 0;
-      }
-      if (leaderboardAudioRef.current) {
-        leaderboardAudioRef.current.pause();
-        leaderboardAudioRef.current.currentTime = 0;
-      }
-
       if (res?.status === 'finished' || res?.finished) {
-        if (audioRef.current) {
-          audioRef.current.pause();
-        }
-        if (leaderboardAudioRef.current) {
-          leaderboardAudioRef.current.pause();
-        }
+        stopAllAudios();
         navigate(`/teacher/games/${id}/result`);
         return;
       }
@@ -386,11 +364,8 @@ export const TeacherGamePlayPage = () => {
       setRoundPhase('question');
       setTimerRunning(true);
 
-      // START SPONGEBOB AGAIN from the beginning for the new question!
-      if (audioRef.current && isPlayingSoundRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
-      }
+      // Play Question BGM cleanly from beginning
+      playPhaseAudio('question');
     } catch (err) {
       setError(err.message || 'Gagal melanjutkan ke soal berikutnya.');
     } finally {
@@ -583,110 +558,124 @@ export const TeacherGamePlayPage = () => {
             ) : (
               <div className="flex-1 min-h-0 flex flex-col justify-between">
                 {/* Check if question is True / False (2 options: A = True, B = False) */}
-                {question.type === 'true_false' || (question.options && question.options.length === 2) ? (
-                  /* Dedicated 2-Option True / False Layout for Teacher / Projector */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 flex-1 min-h-[140px] content-stretch py-1">
-                    {(question.options || []).map((opt, idx) => {
-                      const isOptionTrue =
-                        String(opt.id).toLowerCase() === 'a' ||
-                        String(opt.id).toLowerCase() === 'true' ||
-                        idx === 0 ||
-                        /^(true|benar)$/i.test(opt.text);
+                {(() => {
+                  const validOpts = (question.options || []).filter(
+                    (o) => o && o.text !== null && o.text !== undefined && String(o.text).trim() !== ''
+                  );
+                  const isTF =
+                    question.type === 'true_false' ||
+                    validOpts.length === 2 ||
+                    validOpts.some((o) => /^(true|benar)$/i.test(o.text)) ||
+                    validOpts.some((o) => /^(false|salah)$/i.test(o.text)) ||
+                    (question.options && question.options.length === 2);
 
-                      const isCorrect =
-                        String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase() ||
-                        (isOptionTrue && /^(a|true|benar)$/i.test(String(question.correctOptionId || question.correct_answer))) ||
-                        (!isOptionTrue && /^(b|false|salah)$/i.test(String(question.correctOptionId || question.correct_answer)));
+                  if (isTF) {
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 flex-1 min-h-[140px] content-stretch py-1">
+                        {validOpts.slice(0, 2).map((opt, idx) => {
+                          const isOptionTrue =
+                            String(opt.id).toLowerCase() === 'a' ||
+                            String(opt.id).toLowerCase() === 'true' ||
+                            idx === 0 ||
+                            /^(true|benar)$/i.test(opt.text);
 
-                      const optTheme = isOptionTrue
-                        ? {
-                            symbol: '✓ BENAR (A)',
-                            tag: 'TRUE',
-                            bg: 'bg-emerald-500 text-slate-950',
-                            ring: 'ring-4 sm:ring-6 ring-white ring-offset-2',
-                          }
-                        : {
-                            symbol: '✕ SALAH (B)',
-                            tag: 'FALSE',
-                            bg: 'bg-red-500 text-white',
-                            ring: 'ring-4 sm:ring-6 ring-white ring-offset-2',
-                          };
+                          const isCorrect =
+                            String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase() ||
+                            (isOptionTrue && /^(a|true|benar)$/i.test(String(question.correctOptionId || question.correct_answer))) ||
+                            (!isOptionTrue && /^(b|false|salah)$/i.test(String(question.correctOptionId || question.correct_answer)));
 
-                      const isDimmed = roundPhase === 'reveal' && !isCorrect;
+                          const optTheme = isOptionTrue
+                            ? {
+                                symbol: '✓ BENAR (A)',
+                                tag: 'TRUE',
+                                bg: 'bg-emerald-500 text-slate-950',
+                                ring: 'ring-4 sm:ring-6 ring-white ring-offset-2',
+                              }
+                            : {
+                                symbol: '✕ SALAH (B)',
+                                tag: 'FALSE',
+                                bg: 'bg-red-500 text-white',
+                                ring: 'ring-4 sm:ring-6 ring-white ring-offset-2',
+                              };
 
-                      return (
-                        <div
-                          key={opt.id}
-                          className={`h-full min-h-[120px] sm:min-h-[160px] p-4 sm:p-6 border-3 sm:border-4 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
-                            optTheme.bg
-                          } ${
-                            roundPhase === 'reveal' && isCorrect
-                              ? `${optTheme.ring} scale-[1.02] shadow-block-lg`
-                              : ''
-                          } ${isDimmed ? 'opacity-40 grayscale-[35%]' : ''}`}
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="font-display font-black text-xs sm:text-base px-2.5 py-1 bg-black/25 border border-black/30 rounded-block shadow-sm">
-                              {optTheme.symbol}
-                            </span>
+                          const isDimmed = roundPhase === 'reveal' && !isCorrect;
 
-                            {roundPhase === 'reveal' && isCorrect && (
-                              <Badge
-                                variant="success"
-                                size="md"
-                                className="font-black bg-white text-emerald-900 border-2 border-slate-900 shadow-block-xs text-xs sm:text-sm"
-                              >
-                                KUNCI BENAR ✓
-                              </Badge>
-                            )}
+                          return (
+                            <div
+                              key={opt.id}
+                              className={`h-full min-h-[120px] sm:min-h-[160px] p-4 sm:p-6 border-3 sm:border-4 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
+                                optTheme.bg
+                              } ${
+                                roundPhase === 'reveal' && isCorrect
+                                  ? `${optTheme.ring} scale-[1.02] shadow-block-lg`
+                                  : ''
+                              } ${isDimmed ? 'opacity-40 grayscale-[35%]' : ''}`}
+                            >
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="font-display font-black text-xs sm:text-base px-2.5 py-1 bg-black/25 border border-black/30 rounded-block shadow-sm">
+                                  {optTheme.symbol}
+                                </span>
+
+                                {roundPhase === 'reveal' && isCorrect && (
+                                  <Badge
+                                    variant="success"
+                                    size="md"
+                                    className="font-black bg-white text-emerald-900 border-2 border-slate-900 shadow-block-xs text-xs sm:text-sm"
+                                  >
+                                    KUNCI BENAR ✓
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <p className="font-display font-black text-xl sm:text-2xl md:text-3xl break-words leading-tight my-auto text-center py-2">
+                                {opt.text || (isOptionTrue ? 'Benar / True' : 'Salah / False')}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 flex-1 min-h-0 content-stretch">
+                      {(question.options || []).map((opt, idx) => {
+                        const isCorrect = String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase();
+                        const optTheme = TEACHER_OPTION_STYLES[idx % TEACHER_OPTION_STYLES.length];
+                        const isDimmed = roundPhase === 'reveal' && !isCorrect;
+
+                        return (
+                          <div
+                            key={opt.id}
+                            className={`h-full min-h-0 p-2.5 sm:p-3.5 border-3 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
+                              optTheme.bg
+                            } ${
+                              roundPhase === 'reveal' && isCorrect
+                                ? `${optTheme.ring} scale-[1.01] shadow-block-lg`
+                                : ''
+                            } ${isDimmed ? 'opacity-50 grayscale-[25%]' : ''}`}
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <span className="font-display font-black text-xs sm:text-sm px-2 py-0.5 bg-black/25 border border-black/30 rounded shadow-sm">
+                                {optTheme.symbol}
+                              </span>
+
+                              {roundPhase === 'reveal' && isCorrect && (
+                                <Badge variant="success" size="sm" className="font-black bg-white text-emerald-800 border-2 border-slate-900 shadow-block-xs">
+                                  KUNCI BENAR ✓
+                                </Badge>
+                              )}
+                            </div>
+
+                            <p className="font-display font-bold text-sm sm:text-base md:text-lg break-words leading-snug my-auto">
+                              {opt.text}
+                            </p>
                           </div>
-
-                          <p className="font-display font-black text-xl sm:text-2xl md:text-3xl break-words leading-tight my-auto text-center py-2">
-                            {opt.text || (isOptionTrue ? 'Benar / True' : 'Salah / False')}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* Standard 2x2 Grid of Colored Options */
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3 flex-1 min-h-0 content-stretch">
-                    {(question.options || []).map((opt, idx) => {
-                      const isCorrect = String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase();
-                      const optTheme = TEACHER_OPTION_STYLES[idx % TEACHER_OPTION_STYLES.length];
-                      const isDimmed = roundPhase === 'reveal' && !isCorrect;
-
-                      return (
-                        <div
-                          key={opt.id}
-                          className={`h-full min-h-0 p-2.5 sm:p-3.5 border-3 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
-                            optTheme.bg
-                          } ${
-                            roundPhase === 'reveal' && isCorrect
-                              ? `${optTheme.ring} scale-[1.01] shadow-block-lg`
-                              : ''
-                          } ${isDimmed ? 'opacity-50 grayscale-[25%]' : ''}`}
-                        >
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <span className="font-display font-black text-xs sm:text-sm px-2 py-0.5 bg-black/25 border border-black/30 rounded shadow-sm">
-                              {optTheme.symbol}
-                            </span>
-
-                            {roundPhase === 'reveal' && isCorrect && (
-                              <Badge variant="success" size="sm" className="font-black bg-white text-emerald-800 border-2 border-slate-900 shadow-block-xs">
-                                KUNCI BENAR ✓
-                              </Badge>
-                            )}
-                          </div>
-
-                          <p className="font-display font-bold text-sm sm:text-base md:text-lg break-words leading-snug my-auto">
-                            {opt.text}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
