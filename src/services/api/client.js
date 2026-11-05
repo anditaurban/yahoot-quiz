@@ -3,7 +3,7 @@
 
 import { mockStore } from '../../mocks/mockStore';
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://dev.katib.cloud').replace(/\/$/, '');
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://ngodingai-lms-api.up.railway.app').replace(/\/$/, '');
 const AUTH_TOKEN = import.meta.env.VITE_API_TOKEN || 'DpacnJf3uEQeM7HN';
 const MOCK_DELAY = 100;
 

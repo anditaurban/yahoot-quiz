@@ -2,7 +2,7 @@
 // Fully synchronized via Katib Central LMS Storage (Quiz Record #9) to guarantee
 // cross-device, cross-isolate persistence for all students and teachers.
 
-const KATIB_BASE = 'https://dev.katib.cloud';
+const KATIB_BASE = 'https://ngodingai-lms-api.up.railway.app';
 const KATIB_TOKEN = 'DpacnJf3uEQeM7HN';
 const KATIB_RECORD_ID = 9;
 
