@@ -582,62 +582,111 @@ export const TeacherGamePlayPage = () => {
               </div>
             ) : (
               <div className="flex-1 min-h-0 flex flex-col justify-between">
-                {/* 2x2 Grid of Colored Options - Clean Without Per-Option Progress Bar to Prevent Cheating */}
-                <div className="grid grid-cols-2 gap-2 sm:gap-3 flex-1 min-h-0 content-stretch">
-                  {(question.options || []).map((opt, idx) => {
-                    const isCorrect = String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase();
+                {/* Check if question is True / False (2 options: A = True, B = False) */}
+                {question.type === 'true_false' || (question.options && question.options.length === 2) ? (
+                  /* Dedicated 2-Option True / False Layout for Teacher / Projector */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 flex-1 min-h-[140px] content-stretch py-1">
+                    {(question.options || []).map((opt, idx) => {
+                      const isOptionTrue =
+                        String(opt.id).toLowerCase() === 'a' ||
+                        String(opt.id).toLowerCase() === 'true' ||
+                        idx === 0 ||
+                        /^(true|benar)$/i.test(opt.text);
 
-                    let optTheme = TEACHER_OPTION_STYLES[idx % TEACHER_OPTION_STYLES.length];
-                    if (question.type === 'true_false') {
-                      if (String(opt.id).toLowerCase() === 'true') {
-                        optTheme = {
-                          symbol: '✓ TRUE',
-                          bg: 'bg-emerald-500 text-slate-950',
-                          badge: 'bg-emerald-700 text-white',
-                          ring: 'ring-4 ring-white ring-offset-2',
-                        };
-                      } else {
-                        optTheme = {
-                          symbol: '✕ FALSE',
-                          bg: 'bg-red-500 text-white',
-                          badge: 'bg-red-700 text-white',
-                          ring: 'ring-4 ring-emerald-300 ring-offset-2',
-                        };
-                      }
-                    }
+                      const isCorrect =
+                        String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase() ||
+                        (isOptionTrue && /^(a|true|benar)$/i.test(String(question.correctOptionId || question.correct_answer))) ||
+                        (!isOptionTrue && /^(b|false|salah)$/i.test(String(question.correctOptionId || question.correct_answer)));
 
-                    const isDimmed = roundPhase === 'reveal' && !isCorrect;
+                      const optTheme = isOptionTrue
+                        ? {
+                            symbol: '✓ BENAR (A)',
+                            tag: 'TRUE',
+                            bg: 'bg-emerald-500 text-slate-950',
+                            ring: 'ring-4 sm:ring-6 ring-white ring-offset-2',
+                          }
+                        : {
+                            symbol: '✕ SALAH (B)',
+                            tag: 'FALSE',
+                            bg: 'bg-red-500 text-white',
+                            ring: 'ring-4 sm:ring-6 ring-white ring-offset-2',
+                          };
 
-                    return (
-                      <div
-                        key={opt.id}
-                        className={`h-full min-h-0 p-2.5 sm:p-3.5 border-3 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
-                          optTheme.bg
-                        } ${
-                          roundPhase === 'reveal' && isCorrect
-                            ? `${optTheme.ring} scale-[1.01] shadow-block-lg`
-                            : ''
-                        } ${isDimmed ? 'opacity-50 grayscale-[25%]' : ''}`}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <span className="font-display font-black text-xs sm:text-sm px-2 py-0.5 bg-black/25 border border-black/30 rounded shadow-sm">
-                            {optTheme.symbol}
-                          </span>
+                      const isDimmed = roundPhase === 'reveal' && !isCorrect;
 
-                          {roundPhase === 'reveal' && isCorrect && (
-                            <Badge variant="success" size="sm" className="font-black bg-white text-emerald-800 border-2 border-slate-900 shadow-block-xs">
-                              KUNCI BENAR ✓
-                            </Badge>
-                          )}
+                      return (
+                        <div
+                          key={opt.id}
+                          className={`h-full min-h-[120px] sm:min-h-[160px] p-4 sm:p-6 border-3 sm:border-4 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
+                            optTheme.bg
+                          } ${
+                            roundPhase === 'reveal' && isCorrect
+                              ? `${optTheme.ring} scale-[1.02] shadow-block-lg`
+                              : ''
+                          } ${isDimmed ? 'opacity-40 grayscale-[35%]' : ''}`}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="font-display font-black text-xs sm:text-base px-2.5 py-1 bg-black/25 border border-black/30 rounded-block shadow-sm">
+                              {optTheme.symbol}
+                            </span>
+
+                            {roundPhase === 'reveal' && isCorrect && (
+                              <Badge
+                                variant="success"
+                                size="md"
+                                className="font-black bg-white text-emerald-900 border-2 border-slate-900 shadow-block-xs text-xs sm:text-sm"
+                              >
+                                KUNCI BENAR ✓
+                              </Badge>
+                            )}
+                          </div>
+
+                          <p className="font-display font-black text-xl sm:text-2xl md:text-3xl break-words leading-tight my-auto text-center py-2">
+                            {opt.text || (isOptionTrue ? 'Benar / True' : 'Salah / False')}
+                          </p>
                         </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* Standard 2x2 Grid of Colored Options */
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 flex-1 min-h-0 content-stretch">
+                    {(question.options || []).map((opt, idx) => {
+                      const isCorrect = String(opt.id).toLowerCase() === String(question.correctOptionId).toLowerCase();
+                      const optTheme = TEACHER_OPTION_STYLES[idx % TEACHER_OPTION_STYLES.length];
+                      const isDimmed = roundPhase === 'reveal' && !isCorrect;
 
-                        <p className="font-display font-bold text-sm sm:text-base md:text-lg break-words leading-snug my-auto">
-                          {opt.text}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
+                      return (
+                        <div
+                          key={opt.id}
+                          className={`h-full min-h-0 p-2.5 sm:p-3.5 border-3 border-slate-900 rounded-block transition-all shadow-block flex flex-col justify-between ${
+                            optTheme.bg
+                          } ${
+                            roundPhase === 'reveal' && isCorrect
+                              ? `${optTheme.ring} scale-[1.01] shadow-block-lg`
+                              : ''
+                          } ${isDimmed ? 'opacity-50 grayscale-[25%]' : ''}`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <span className="font-display font-black text-xs sm:text-sm px-2 py-0.5 bg-black/25 border border-black/30 rounded shadow-sm">
+                              {optTheme.symbol}
+                            </span>
+
+                            {roundPhase === 'reveal' && isCorrect && (
+                              <Badge variant="success" size="sm" className="font-black bg-white text-emerald-800 border-2 border-slate-900 shadow-block-xs">
+                                KUNCI BENAR ✓
+                              </Badge>
+                            )}
+                          </div>
+
+                          <p className="font-display font-bold text-sm sm:text-base md:text-lg break-words leading-snug my-auto">
+                            {opt.text}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

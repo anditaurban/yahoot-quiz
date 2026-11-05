@@ -22,6 +22,7 @@ export const StudentPlayPage = () => {
   const [typedAnswer, setTypedAnswer] = useState('');
   const [answerFeedback, setAnswerFeedback] = useState(null); // { correct, points, totalScore, streak, selectedText }
   const [playerStats, setPlayerStats] = useState({ score: 0, rank: 1, streak: 0 });
+  const [leaderboard, setLeaderboard] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -103,6 +104,7 @@ export const StudentPlayPage = () => {
         // Update player score from results endpoint
         const resData = await getResults(playerSession.gameId);
         if (resData?.players) {
+          setLeaderboard(resData.players);
           const me = resData.players.find(
             (p) => (p.playerId || p.id) === playerSession.playerId
           );
@@ -221,7 +223,7 @@ export const StudentPlayPage = () => {
   }
 
   return (
-    <div className="h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] overflow-hidden game-grid-pattern py-2 sm:py-3 px-3 sm:px-6 flex flex-col justify-between max-w-4xl mx-auto">
+    <div className="min-h-[100dvh] game-grid-pattern py-2 sm:py-3 px-3 sm:px-6 flex flex-col justify-between max-w-2xl mx-auto overflow-y-auto">
       {/* Top Header info */}
       <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -300,6 +302,20 @@ export const StudentPlayPage = () => {
               <Check className="w-5 h-5 stroke-[3]" />
             </Button>
           </form>
+        ) : question.type === 'true_false' || question.options?.length === 2 ? (
+          /* Dedicated 2-Option True / False Layout for Student */
+          <div className="flex-1 flex flex-col sm:grid sm:grid-cols-2 gap-3 py-2 min-h-0 justify-center">
+            {question.options.map((opt, idx) => (
+              <QuestionOption
+                key={opt.id}
+                index={idx}
+                option={opt}
+                type="true_false"
+                onClick={handleSelectOption}
+                keyboardShortcut={String(idx + 1)}
+              />
+            ))}
+          </div>
         ) : (
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 py-1 sm:py-2 min-h-0 content-stretch">
             {question.options.map((opt, idx) => (
@@ -365,19 +381,19 @@ export const StudentPlayPage = () => {
         </div>
       )}
 
-      {/* STATE 5: RESULT / FEEDBACK (HASIL JAWABAN TERBUKA SERENTAK) */}
+      {/* STATE 5: RESULT / FEEDBACK (HASIL JAWABAN & KLASEMEN SEMENTARA) */}
       {gameState === 'result' && (
-        <div className="my-auto animate-in fade-in zoom-in-95 py-4 space-y-4 max-w-md mx-auto w-full">
+        <div className="py-2 space-y-3 max-w-md mx-auto w-full animate-in fade-in zoom-in-95">
           {answerFeedback?.correct ? (
-            <Card className="bg-emerald-400 border-3 border-slate-900 shadow-block-lg p-5 sm:p-6 text-center">
-              <div className="w-14 h-14 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-emerald-600 mb-2 shadow-block-sm">
-                <Check className="w-9 h-9 stroke-[3.5]" />
+            <Card className="bg-emerald-400 border-3 border-slate-900 shadow-block p-4 sm:p-5 text-center">
+              <div className="w-12 h-12 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-emerald-600 mb-1.5 shadow-block-xs">
+                <Check className="w-8 h-8 stroke-[3.5]" />
               </div>
-              <h3 className="font-display font-black text-2xl text-slate-950">
+              <h3 className="font-display font-black text-xl sm:text-2xl text-slate-950">
                 JAWABAN KAMU BENAR! 🎉
               </h3>
-              <div className="mt-2.5 flex items-center justify-center gap-2">
-                <span className="font-display font-black text-base bg-white border-2 border-slate-900 px-3 py-0.5 rounded shadow-block-xs text-emerald-800">
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <span className="font-display font-black text-sm sm:text-base bg-white border-2 border-slate-900 px-3 py-0.5 rounded shadow-block-xs text-emerald-800">
                   +{answerFeedback.points} Poin
                 </span>
                 {answerFeedback.streak > 1 && (
@@ -389,11 +405,11 @@ export const StudentPlayPage = () => {
               </div>
             </Card>
           ) : answerFeedback ? (
-            <Card className="bg-rose-200 border-3 border-slate-900 shadow-block-lg p-5 sm:p-6 text-center">
-              <div className="w-14 h-14 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-rose-600 mb-2 shadow-block-sm">
-                <X className="w-9 h-9 stroke-[3.5]" />
+            <Card className="bg-rose-200 border-3 border-slate-900 shadow-block p-4 sm:p-5 text-center">
+              <div className="w-12 h-12 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-rose-600 mb-1.5 shadow-block-xs">
+                <X className="w-8 h-8 stroke-[3.5]" />
               </div>
-              <h3 className="font-display font-black text-2xl text-rose-950">
+              <h3 className="font-display font-black text-xl sm:text-2xl text-rose-950">
                 JAWABAN KURANG TEPAT ❌
               </h3>
               <p className="text-xs font-bold text-rose-950 mt-1">
@@ -401,11 +417,11 @@ export const StudentPlayPage = () => {
               </p>
             </Card>
           ) : (
-            <Card className="bg-amber-100 border-3 border-slate-900 shadow-block-lg p-5 sm:p-6 text-center">
-              <div className="w-14 h-14 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-amber-600 mb-2 shadow-block-sm">
-                <Clock className="w-8 h-8 stroke-[2.5]" />
+            <Card className="bg-amber-100 border-3 border-slate-900 shadow-block p-4 sm:p-5 text-center">
+              <div className="w-12 h-12 bg-white border-2 border-slate-900 rounded-block mx-auto flex items-center justify-center text-amber-600 mb-1.5 shadow-block-xs">
+                <Clock className="w-7 h-7 stroke-[2.5]" />
               </div>
-              <h3 className="font-display font-black text-2xl text-slate-950">
+              <h3 className="font-display font-black text-xl sm:text-2xl text-slate-950">
                 BELUM SEMPAT MENJAWAB ⏱️
               </h3>
               <p className="text-xs font-bold text-slate-700 mt-1">
@@ -414,16 +430,52 @@ export const StudentPlayPage = () => {
             </Card>
           )}
 
+          {/* Klasemen Sementara & Skor Pemain (Tanpa Banner Duplikat) */}
           <ScoreCard
-            isCorrect={answerFeedback?.correct}
-            pointsEarned={answerFeedback?.points || 0}
             score={playerStats.score}
             rank={playerStats.rank}
             streak={playerStats.streak}
             nickname={playerSession?.nickname}
           />
 
-          <p className="text-center text-xs font-bold text-slate-500">
+          {/* Mini Klasemen Top 3 Pemain */}
+          {leaderboard.length > 0 && (
+            <Card className="bg-white border-3 border-slate-900 shadow-block-sm p-3 text-left">
+              <div className="flex items-center justify-between mb-2 pb-1.5 border-b-2 border-slate-100">
+                <span className="font-display font-black text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-amber-500" />
+                  Klasemen Sementara
+                </span>
+                <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded">
+                  {leaderboard.length} Murid
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {leaderboard.slice(0, 3).map((p, pIdx) => {
+                  const isMe = (p.playerId || p.id) === playerSession.playerId;
+                  const medals = ['🥇', '🥈', '🥉'];
+                  return (
+                    <div
+                      key={p.playerId || p.id || pIdx}
+                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-block text-xs transition-all ${
+                        isMe
+                          ? 'bg-amber-200 border-2 border-slate-900 font-black shadow-block-xs'
+                          : 'bg-slate-50 border border-slate-200 font-bold text-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate min-w-0">
+                        <span className="text-sm shrink-0">{medals[pIdx] || `#${pIdx + 1}`}</span>
+                        <span className="truncate">{p.nickname} {isMe && '(Kamu)'}</span>
+                      </div>
+                      <span className="shrink-0 font-display font-black text-slate-950">{p.score} pt</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          <p className="text-center text-xs font-bold text-slate-500 py-1">
             Guru sedang menampilkan pembahasan & klasemen sementara...
           </p>
         </div>
