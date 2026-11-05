@@ -29,6 +29,7 @@ export const StudentPlayPage = () => {
   const startTimeRef = useRef(Date.now());
   const currentQuestionIdRef = useRef(null);
   const currentQuestionIndexRef = useRef(-1);
+  const hasLoadedGameRef = useRef(false);
 
   // Load player session
   useEffect(() => {
@@ -59,6 +60,8 @@ export const StudentPlayPage = () => {
       try {
         const game = await getGame(code);
         if (!isMounted) return;
+        hasLoadedGameRef.current = true;
+        setError('');
 
         // If game is finished, navigate to result
         if (game.status === 'finished') {
@@ -113,7 +116,11 @@ export const StudentPlayPage = () => {
         }
       } catch (err) {
         if (!isMounted) return;
-        setError(err.message || 'Gagal memuat pertanyaan kuis.');
+        if (!hasLoadedGameRef.current) {
+          setError(err.message || 'Gagal memuat pertanyaan kuis.');
+        } else {
+          console.warn('Transient poll error in student play:', err?.message || err);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
