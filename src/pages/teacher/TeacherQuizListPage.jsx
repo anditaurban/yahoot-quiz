@@ -219,24 +219,9 @@ export const TeacherQuizListPage = () => {
           </Button>
         </div>
 
-        {/* Course Filter & Search Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="sm:w-72">
-            <select
-              value={selectedCourseFilter}
-              onChange={(e) => setSelectedCourseFilter(e.target.value)}
-              className="w-full min-h-[44px] px-3.5 py-2 bg-white text-sm font-display font-bold border-2 border-slate-900 rounded-block shadow-block-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-            >
-              <option value="all">🌟 Semua Kuis Yahoot! (Koleksi Penuh)</option>
-              {courses.map(c => (
-                <option key={c.course_id} value={String(c.course_id)}>
-                  Filter Course #{c.course_id}: {c.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <form onSubmit={handleSearchSubmit} className="relative flex-1">
+        {/* Search Bar */}
+        <div className="w-full">
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
             <input
               type="text"
               placeholder="Cari judul kuis atau materi... (Tekan Enter)"
