@@ -91,6 +91,7 @@ export const TeacherGamePlayPage = () => {
   const currentQuestionIndexRef = useRef(-1);
   const roundPhaseRef = useRef('question');
   const justAdvancedRef = useRef(false);
+  const hasLoadedGameRef = useRef(false);
 
   // Background Music & Sound Effects for Quiz Stages
   useEffect(() => {
@@ -188,9 +189,13 @@ export const TeacherGamePlayPage = () => {
         const gameData = await getGameById(id);
         if (!isMounted) return;
         if (!gameData) {
-          setError('Sesi game tidak ditemukan.');
+          if (!hasLoadedGameRef.current) {
+            setError('Sesi game tidak ditemukan.');
+          }
           return;
         }
+        hasLoadedGameRef.current = true;
+        setError('');
         setGame(gameData);
 
         if (gameData.status === 'finished') {
@@ -255,7 +260,11 @@ export const TeacherGamePlayPage = () => {
         }
       } catch (err) {
         if (!isMounted) return;
-        setError(err.message || 'Gagal memuat status permainan.');
+        if (!hasLoadedGameRef.current) {
+          setError(err.message || 'Gagal memuat status permainan.');
+        } else {
+          console.warn('Transient poll error in teacher play:', err?.message || err);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
